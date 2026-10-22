@@ -151,8 +151,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .stat .t{font-size:12px;font-weight:700;color:var(--muted)}
 .stat .v{display:block;font-family:'Big Shoulders Stencil Display',Impact,sans-serif;font-weight:800;font-size:28px;letter-spacing:.03em;margin-top:2px}
 .stat .s{font-size:12px;color:#ff8a8a;font-weight:700}
+.stat .s.n{color:var(--muted);font-weight:600}
 .tools{display:grid;gap:10px;margin-top:14px}
 .tools .row{display:flex;gap:8px}
+.tools .mes-row{align-items:center}
+.tools .mes-row .lbl{flex:0 0 auto}
+.tools .mes-row select{flex:1;min-height:44px}
 .tools input[type=search],.tools input.buscar{flex:1}
 .filtros{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .filtros::-webkit-scrollbar{display:none}
@@ -389,6 +393,10 @@ details .stack{padding-bottom:14px}
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </button>
       </div>
+      <div class="row mes-row">
+        <label for="filtro-mes" class="lbl">Mes del pedido</label>
+        <select id="filtro-mes" aria-label="Filtrar por mes en que se hizo el pedido"><option value="">Todos los meses</option></select>
+      </div>
       <div class="filtros" id="filtros" role="radiogroup" aria-label="Filtrar pedidos"></div>
     </div>
     <div class="lista" id="lista" aria-live="polite"></div>
@@ -430,6 +438,37 @@ details .stack{padding-bottom:14px}
     <div class="acciones-dlg">
       <button class="btn primary" id="pago-ok" type="submit">Registrar</button>
       <button class="btn ghost" id="pago-cancelar" type="button">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Diálogo: editar pedido -->
+<dialog id="dlg-editar" aria-labelledby="ed-titulo">
+  <h2 id="ed-titulo">Editar pedido</h2>
+  <p class="sub" id="ed-sub"></p>
+  <form id="form-editar" novalidate class="stack">
+    <div class="field">
+      <label for="ed-fecha">Fecha del pedido</label>
+      <div class="fecha-wrap">
+        <input id="ed-fecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off">
+        <button type="button" class="cal-btn" data-cal="ed-fecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+        <input type="date" class="cal-sel" id="ed-fecha-sel" tabindex="-1" aria-hidden="true">
+      </div>
+      <p class="err" id="ed-fecha-err"></p>
+    </div>
+    <div class="field">
+      <label for="ed-entregaFecha">Fecha de entrega</label>
+      <div class="fecha-wrap">
+        <input id="ed-entregaFecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off">
+        <button type="button" class="cal-btn" data-cal="ed-entregaFecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+        <input type="date" class="cal-sel" id="ed-entregaFecha-sel" tabindex="-1" aria-hidden="true">
+      </div>
+      <p class="err" id="ed-entrega-err"></p>
+    </div>
+    <p class="err" id="ed-err"></p>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="ed-ok" type="submit">Guardar cambios</button>
+      <button class="btn ghost" id="ed-cancelar" type="button">Cancelar</button>
     </div>
   </form>
 </dialog>
@@ -592,6 +631,7 @@ var S = {
   cache: leer(LS.cache, []),
   conexion: 'sinconfig',
   filtro: 'activos',
+  mes: '',
   busqueda: '',
   mensajeActual: ''
 };
@@ -1026,6 +1066,21 @@ function badgeEstado(p) {
   var m = { 'Recibido': 'b-mute', 'En producción': 'b-info', 'Listo para entrega': 'b-violet', 'Enviado': 'b-violet', 'Entregado': 'b-ok', 'Cancelado': 'b-mute' };
   return '<span class="badge ' + (m[p.estado] || 'b-mute') + '">' + esc(p.estado) + '</span>';
 }
+/* Mes en que se hizo el pedido (por la fecha del pedido) */
+var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+function nombreMes(ym) { var m = parseInt(String(ym).slice(5, 7), 10); return (MESES[m - 1] || ym) + ' ' + String(ym).slice(0, 4); }
+function mesDe(p) { var m = /^(\d{4}-\d{2})/.exec(p.fecha || ''); return m ? m[1] : ''; }
+function pasaMes(p) { return !S.mes || mesDe(p) === S.mes; }
+function pintarMeses(todos) {
+  var vistos = {}; todos.forEach(function (p) { var m = mesDe(p); if (m) vistos[m] = 1; });
+  if (S.mes) vistos[S.mes] = 1;
+  var meses = Object.keys(vistos).sort().reverse(), firma = meses.join(','), sel = $('#filtro-mes');
+  if (sel.dataset.firma !== firma) {
+    sel.innerHTML = '<option value="">Todos los meses</option>' + meses.map(function (m) { return '<option value="' + m + '">' + esc(nombreMes(m)) + '</option>'; }).join('');
+    sel.dataset.firma = firma;
+  }
+  sel.value = S.mes;
+}
 function pintarStats(lista) {
   var vivos = lista.filter(function (p) { return p.estado !== 'Cancelado'; });
   var porCobrar = vivos.reduce(function (a, p) { return a + (p.debe || 0); }, 0);
@@ -1033,13 +1088,13 @@ function pintarStats(lista) {
   var prox = activos.filter(function (p) { var d = p.entregaFecha ? diasHasta(p.entregaFecha) : null; return d !== null && d >= 0 && d <= 7; }).length;
   var vencidos = activos.filter(function (p) { var d = p.entregaFecha ? diasHasta(p.entregaFecha) : null; return d !== null && d < 0; }).length;
   var enProd = vivos.filter(function (p) { return p.estado === 'En producción'; }).length;
-  var mes = hoyISO().slice(0, 7);
-  var vendido = vivos.filter(function (p) { return String(p.fecha || '').slice(0, 7) === mes; }).reduce(function (a, p) { return a + (p.total || 0); }, 0);
+  var delMes = vivos.filter(pasaMes);
+  var vendido = delMes.reduce(function (a, p) { return a + (p.total || 0); }, 0);
   $('#stats').innerHTML =
     '<div class="stat"><span class="t">Por cobrar</span><span class="v">' + dinero(porCobrar) + '</span></div>' +
     '<div class="stat"><span class="t">Entregas en 7 días</span><span class="v">' + prox + '</span>' + (vencidos ? '<span class="s">' + vencidos + (vencidos === 1 ? ' vencida' : ' vencidas') + '</span>' : '') + '</div>' +
     '<div class="stat"><span class="t">En producción</span><span class="v">' + enProd + '</span></div>' +
-    '<div class="stat"><span class="t">Vendido este mes</span><span class="v">' + dinero(vendido) + '</span></div>';
+    '<div class="stat"><span class="t">' + (S.mes ? 'Vendido en ' + esc(nombreMes(S.mes)) : 'Vendido en total') + '</span><span class="v">' + dinero(vendido) + '</span><span class="s n">' + delMes.length + (delMes.length === 1 ? ' pedido' : ' pedidos') + '</span></div>';
 }
 function tarjeta(p) {
   var cuando = '', clase = 'b-mute';
@@ -1081,13 +1136,15 @@ function tarjeta(p) {
     '<div class="acciones">' +
     ((p.debe || 0) > 0 && p.estado !== 'Cancelado' ? '<button class="btn small" type="button" data-accion="pagar" data-id="' + esc(p.id) + '">Registrar pago</button>' : '') +
     '<select aria-label="Cambiar estado de ' + esc(p.id) + '" data-accion="estado" data-id="' + esc(p.id) + '">' + opciones + '</select>' +
-    '<button class="btn small ghost" type="button" data-accion="mensaje" data-id="' + esc(p.id) + '">Mensaje</button></div></article>';
+    '<button class="btn small ghost" type="button" data-accion="mensaje" data-id="' + esc(p.id) + '">Mensaje</button>' +
+    '<button class="btn small ghost" type="button" data-accion="editar" data-id="' + esc(p.id) + '">Editar</button></div></article>';
 }
 function renderPedidos() {
   var todos = todosLosPedidos();
   $('#cuenta-activos').textContent = todos.filter(esActivo).length;
+  pintarMeses(todos);
   pintarStats(todos.filter(function (p) { return !p.pendiente; }));
-  var lista = todos.filter(pasaFiltro).filter(pasaBusqueda);
+  var lista = todos.filter(pasaMes).filter(pasaFiltro).filter(pasaBusqueda);
   var porEntrega = S.filtro === 'activos' || S.filtro === 'semana' || S.filtro === 'cobrar';
   lista.sort(function (a, b) {
     if (a.pendiente !== b.pendiente) return a.pendiente ? -1 : 1;
@@ -1134,10 +1191,44 @@ function onPago(ev) {
     renderPedidos();
   }, function (e) { err.textContent = e.message; }).then(function () { btn.disabled = false; });
 }
+function abrirEditar(id) {
+  var p = buscarPedido(id); if (!p) return;
+  var f = $('#form-editar'); f.dataset.id = id;
+  $('#ed-sub').textContent = p.cliente + ' · ' + p.id;
+  ponerFecha('ed-fecha', p.fecha); ponerFecha('ed-entregaFecha', p.entregaFecha);
+  ['ed-fecha-err', 'ed-entrega-err', 'ed-err'].forEach(function (x) { $('#' + x).textContent = ''; });
+  abrir($('#dlg-editar'));
+  setTimeout(function () { $('#ed-fecha').focus(); }, 50);
+}
+function onEditar(ev) {
+  ev.preventDefault();
+  var id = $('#form-editar').dataset.id, p = buscarPedido(id); if (!p) return;
+  var msg = 'Escribe la fecha como día/mes/año, por ejemplo 21/10/2026.';
+  var ft = $('#ed-fecha').value.trim(), et = $('#ed-entregaFecha').value.trim();
+  var nf = isoDeTexto(ft), ne = et ? isoDeTexto(et) : '';
+  var antesF = String(p.fecha || '').slice(0, 10), antesE = String(p.entregaFecha || '').slice(0, 10);
+  $('#ed-fecha-err').textContent = !nf ? msg : '';
+  $('#ed-entrega-err').textContent = et ? (ne ? '' : msg) : (antesE ? 'Escribe la fecha de entrega.' : '');
+  $('#ed-err').textContent = '';
+  if (!nf || (et && !ne) || (!et && antesE)) return;
+  var cambios = {};
+  if (nf !== antesF) cambios.fecha = nf;          // la fecha del pedido va primero a propósito
+  if (ne !== antesE) cambios.entregaFecha = ne;
+  if (!Object.keys(cambios).length) { cerrar($('#dlg-editar')); toast('No cambiaste nada.'); return; }
+  var btn = $('#ed-ok'); btn.disabled = true;
+  api('actualizar', { id: id, cambios: cambios }).then(function (r) {
+    upsertCache(r.pedido); cerrar($('#dlg-editar')); toast(id + ': fechas actualizadas.'); renderPedidos();
+  }, function (e) {
+    $('#ed-err').textContent = /No se puede cambiar el campo: fecha\b/.test(e.message)
+      ? 'Tu hoja todavía tiene la versión anterior del script y no deja cambiar la fecha del pedido. Actualiza el script con el Code.gs nuevo (Implementar > Administrar implementaciones > Nueva versión) y vuelve a intentar.'
+      : e.message;
+  }).then(function () { btn.disabled = false; });
+}
 function onListaClick(ev) {
   var b = ev.target.closest('[data-accion]'); if (!b || b.tagName === 'SELECT') return;
   var a = b.dataset.accion, id = b.dataset.id;
   if (a === 'pagar') abrirPago(id);
+  else if (a === 'editar') abrirEditar(id);
   else if (a === 'mensaje') { var p = buscarPedido(id); if (p) copiar(mensajeCliente(p)).then(function (ok) { toast(ok ? 'Mensaje copiado, listo para pegar en WhatsApp.' : 'No pude copiar. Intenta de nuevo.', ok ? '' : 'error'); }); }
   else if (a === 'mensaje-pend') { var q = S.pend.find(function (x) { return x.ref === b.dataset.ref; }); if (q) copiar(mensajeCliente(q)).then(function (ok) { toast(ok ? 'Mensaje copiado.' : 'No pude copiar.', ok ? '' : 'error'); }); }
   else if (a === 'reintentar') enviarPendientes(false);
@@ -1208,7 +1299,7 @@ function irA(vista) {
 /* Arranque */
 function iniciar() {
   pintarListas(); pintarFiltros(); agregarItem();
-  ponerFecha('fecha', hoyISO()); ligarFecha('fecha'); ligarFecha('entregaFecha');
+  ponerFecha('fecha', hoyISO()); ligarFecha('fecha'); ligarFecha('entregaFecha'); ligarFecha('ed-fecha'); ligarFecha('ed-entregaFecha');
   ligarDinero($('#total'), actualizarSaldo); ligarDinero($('#pago'), actualizarSaldo); ligarDinero($('#pago-monto'));
 
   $('#form').addEventListener('submit', onGuardar);
@@ -1235,6 +1326,9 @@ function iniciar() {
   $('#lista').addEventListener('click', onListaClick);
   $('#lista').addEventListener('change', onListaChange);
 
+  $('#filtro-mes').addEventListener('change', function (ev) { S.mes = ev.target.value; renderPedidos(); });
+  $('#form-editar').addEventListener('submit', onEditar);
+  $('#ed-cancelar').addEventListener('click', function () { cerrar($('#dlg-editar')); });
   $('#form-pago').addEventListener('submit', onPago);
   $('#pago-cancelar').addEventListener('click', function () { cerrar($('#dlg-pago')); });
   $('#ok-copiar').addEventListener('click', function () {

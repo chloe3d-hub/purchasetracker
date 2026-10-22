@@ -280,20 +280,30 @@ function actualizarPedido_(sh, req) {
   var fila = buscarFila_(sh, req.id);
   var tz = zona_(sh);
   var cambios = req.cambios || {};
-  var permitidos = ['estado', 'entregaFecha', 'entregaTipo', 'entregaVia', 'direccion', 'notas'];
+  var permitidos = ['estado', 'fecha', 'entregaFecha', 'entregaTipo', 'entregaVia', 'direccion', 'notas'];
+  var listos = {};
+  // Primero se revisa todo; solo si todo está bien se escribe. Así un cambio inválido no deja el pedido a medias.
   Object.keys(cambios).forEach(function (k) {
     if (permitidos.indexOf(k) < 0) throw new Error('No se puede cambiar el campo: ' + k);
     var v = cambios[k];
     if (k === 'estado') {
       if (ESTADOS.indexOf(v) < 0) throw new Error('Estado no válido: ' + v);
-    } else if (k === 'entregaFecha') {
+    } else if (k === 'fecha') {
       v = fecha_(v, tz);
+      if (!v) throw new Error('La fecha del pedido no es válida.');
+    } else if (k === 'entregaFecha') {
+      var texto = v;
+      v = fecha_(v, tz);
+      if (texto && !v) throw new Error('La fecha de entrega no es válida.');
     } else if (k === 'entregaTipo') {
       v = v === 'Envío' ? 'Envío' : 'Recogida';
     } else {
       v = texto_(v, k === 'direccion' || k === 'notas' ? 600 : 100);
     }
-    sh.getRange(fila, COL[k]).setValue(v);
+    listos[k] = v;
+  });
+  Object.keys(listos).forEach(function (k) {
+    sh.getRange(fila, COL[k]).setValue(listos[k]);
   });
   SpreadsheetApp.flush();
   return objetoDeFila_(sh, fila);
