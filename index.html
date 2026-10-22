@@ -102,6 +102,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
   font-weight:700;font-size:13px;color:var(--muted);cursor:pointer}
 .quick button:hover{background:var(--surface-3);color:var(--text)}
 
+.item{display:grid;gap:14px}
+.item-head{display:none;justify-content:space-between;align-items:center;gap:10px}
+.items.multi .item{background:#0f0f10;border-radius:14px;padding:14px}
+.items.multi .item-head{display:flex}
+.item-titulo{font-family:'Big Shoulders Stencil Display',Impact,'Arial Narrow',sans-serif;font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.btn.add{width:100%;background:var(--surface-2);color:var(--text)}
 .stepper{display:grid;grid-template-columns:48px 1fr 48px;gap:8px}
 .stepper button{min-height:48px;border:0;border-radius:12px;background:var(--surface-2);font-size:22px;font-weight:800;cursor:pointer}
 .stepper button:hover{background:var(--surface-3)}
@@ -235,9 +241,13 @@ details .stack{padding-bottom:14px}
               <p class="err" data-for="cliente"></p>
             </div>
             <div class="field">
-              <label for="contacto">WhatsApp o teléfono</label>
-              <input id="contacto" name="contacto" type="tel" inputmode="tel" autocomplete="off">
+              <label for="fecha">Fecha del pedido</label>
+              <input id="fecha" name="fecha" type="date">
             </div>
+          </div>
+          <div class="field">
+            <label for="contacto">WhatsApp o teléfono</label>
+            <input id="contacto" name="contacto" type="tel" inputmode="tel" autocomplete="off">
           </div>
           <div class="field" role="group" aria-labelledby="lbl-canal">
             <span class="lbl" id="lbl-canal">¿Por dónde nos contactó? <span class="req">*</span></span>
@@ -251,25 +261,10 @@ details .stack{padding-bottom:14px}
       <div class="card">
         <h2>Pedido</h2>
         <div class="stack">
-          <div class="grid2 collapse">
-            <div class="field">
-              <label for="producto">Producto <span class="req">*</span></label>
-              <select id="producto" name="producto"></select>
-              <input id="producto-otro" type="text" placeholder="¿Qué producto es?" hidden>
-              <p class="err" data-for="producto"></p>
-            </div>
-            <div class="field">
-              <span class="lbl" id="lbl-cant">Cantidad</span>
-              <div class="stepper">
-                <button type="button" id="cant-menos" aria-label="Una menos">&minus;</button>
-                <input id="cantidad" name="cantidad" type="number" min="1" max="999" value="1" inputmode="numeric" aria-labelledby="lbl-cant">
-                <button type="button" id="cant-mas" aria-label="Una más">+</button>
-              </div>
-            </div>
-          </div>
+          <div id="items" class="items stack"></div>
           <div class="field">
-            <label for="detalles">Detalles (color, tamaño, personalización)</label>
-            <textarea id="detalles" name="detalles" rows="3"></textarea>
+            <button type="button" class="btn add" id="btn-agregar-item">+ Agregar otro producto</button>
+            <p class="err" data-for="items"></p>
           </div>
         </div>
       </div>
@@ -351,15 +346,9 @@ details .stack{padding-bottom:14px}
       <div class="card">
         <h2>Extras</h2>
         <div class="stack">
-          <div class="grid2 collapse">
-            <div class="field">
-              <label for="fecha">Fecha del pedido</label>
-              <input id="fecha" name="fecha" type="date">
-            </div>
-            <div class="field">
-              <label for="estado">Estado del pedido</label>
-              <select id="estado" name="estado"></select>
-            </div>
+          <div class="field">
+            <label for="estado">Estado del pedido</label>
+            <select id="estado" name="estado"></select>
           </div>
           <div class="field">
             <label for="notas">Notas</label>
@@ -644,7 +633,7 @@ function valorSelect(selId) {
   return sel.value === OTRO ? $('#' + selId + '-otro').value.trim() : sel.value;
 }
 function pintarListas() {
-  pintarSelect('producto', S.listas.productos, 'Elige un producto');
+  repoblarItems();
   pintarChips('chips-canal', 'canal', S.listas.canales, 'canal-otro', true);
   pintarChips('chips-metodo', 'metodo', S.listas.metodos, 'metodo-otro', true);
   pintarSelect('transportadora', S.listas.transportadoras, 'Elige una opción');
@@ -667,6 +656,85 @@ function ligarDinero(inp, alCambiar) {
 }
 function ponerDinero(inp, n) { inp.value = n > 0 ? miles(n) : ''; }
 
+/* Formulario: productos del pedido (uno o varios) */
+var itemSeq = 0;
+function poblarProducto(el) {
+  var sel = $('.it-producto', el), otro = $('.it-otro', el), actual = sel.value;
+  sel.innerHTML = '<option value="">Elige un producto</option>' +
+    S.listas.productos.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('') +
+    '<option value="' + OTRO + '">Otro…</option>';
+  if (actual && (actual === OTRO || S.listas.productos.indexOf(actual) >= 0)) sel.value = actual;
+  otro.hidden = sel.value !== OTRO;
+  sel.onchange = function () { otro.hidden = sel.value !== OTRO; if (!otro.hidden) otro.focus(); };
+}
+function repoblarItems() { $$('#items [data-item]').forEach(poblarProducto); }
+function actualizarItems() {
+  var els = $$('#items [data-item]');
+  $('#items').classList.toggle('multi', els.length > 1);
+  els.forEach(function (el, i) {
+    $('.item-titulo', el).textContent = 'Producto ' + (i + 1);
+    $('.item-quitar', el).hidden = els.length < 2;
+  });
+}
+function agregarItem() {
+  var k = ++itemSeq, el = document.createElement('div');
+  el.className = 'item'; el.setAttribute('data-item', '');
+  el.innerHTML =
+    '<div class="item-head"><span class="item-titulo">Producto</span><button type="button" class="btn small ghost item-quitar">Quitar</button></div>' +
+    '<div class="grid2 collapse">' +
+      '<div class="field"><label for="it-prod-' + k + '">Producto <span class="req">*</span></label>' +
+        '<select class="it-producto" id="it-prod-' + k + '"></select>' +
+        '<input type="text" class="it-otro" id="it-otro-' + k + '" placeholder="¿Qué producto es?" aria-label="Nombre del producto" hidden>' +
+        '<p class="err it-err"></p></div>' +
+      '<div class="field"><span class="lbl" id="it-lbl-' + k + '">Cantidad</span>' +
+        '<div class="stepper"><button type="button" class="it-menos" aria-label="Una menos">&minus;</button>' +
+        '<input type="number" class="it-cant" min="1" max="999" value="1" inputmode="numeric" aria-labelledby="it-lbl-' + k + '">' +
+        '<button type="button" class="it-mas" aria-label="Una más">+</button></div></div>' +
+    '</div>' +
+    '<div class="field"><label for="it-det-' + k + '">Detalles (color, tamaño, personalización)</label>' +
+      '<textarea class="it-detalles" id="it-det-' + k + '" rows="2"></textarea></div>';
+  $('#items').appendChild(el);
+  poblarProducto(el); actualizarItems();
+  return el;
+}
+function leerItems() {
+  return $$('#items [data-item]').map(function (el) {
+    var sel = $('.it-producto', el), cant = parseInt($('.it-cant', el).value, 10);
+    return {
+      el: el,
+      nombre: sel.value === OTRO ? $('.it-otro', el).value.trim() : sel.value,
+      cantidad: cant > 0 ? cant : 1,
+      detalles: $('.it-detalles', el).value.trim()
+    };
+  });
+}
+/* Un pedido siempre es una sola fila en la hoja. Con varios productos se unen con " + ". */
+function componerProductos(items) {
+  if (items.length === 1) return { producto: items[0].nombre, cantidad: items[0].cantidad, detalles: items[0].detalles };
+  return {
+    producto: items.map(function (i) { return i.nombre + (i.cantidad > 1 ? ' x' + i.cantidad : ''); }).join(' + '),
+    cantidad: items.reduce(function (a, i) { return a + i.cantidad; }, 0),
+    detalles: items.filter(function (i) { return i.detalles; }).map(function (i) { return i.nombre + ': ' + i.detalles; }).join(' | ')
+  };
+}
+function textoProducto(p) {
+  var t = String(p.producto || '');
+  return t.indexOf(' + ') >= 0 ? t : t + (p.cantidad > 1 ? ' × ' + p.cantidad : '');
+}
+function onItemsClick(ev) {
+  var b = ev.target.closest('button'); if (!b) return;
+  var el = b.closest('[data-item]'); if (!el) return;
+  var cant = $('.it-cant', el);
+  if (b.classList.contains('it-menos')) cant.value = Math.max(1, (parseInt(cant.value, 10) || 1) - 1);
+  else if (b.classList.contains('it-mas')) cant.value = Math.min(999, (parseInt(cant.value, 10) || 1) + 1);
+  else if (b.classList.contains('item-quitar')) {
+    var it = leerItems().filter(function (x) { return x.el === el; })[0];
+    if ($$('#items [data-item]').length < 2) return;
+    if ((it.nombre || it.detalles) && !confirm('¿Quitar este producto del pedido?')) return;
+    el.remove(); actualizarItems();
+  }
+}
+
 /* Formulario: saldo */
 function actualizarSaldo() {
   var total = soloNumero($('#total').value), pago = soloNumero($('#pago').value);
@@ -686,17 +754,15 @@ function actualizarEntrega() {
 }
 
 /* Formulario: leer y validar */
-function leerFormulario() {
+function leerFormulario(items) {
   var f = $('#form');
+  var comp = componerProductos(items);
   var v = function (n) { return (f.elements[n] ? f.elements[n].value : '').trim(); };
   var tipo = (document.querySelector('input[name="entregaTipo"]:checked') || {}).value || '';
-  var cant = parseInt(v('cantidad'), 10);
   return {
     cliente: v('cliente'), contacto: v('contacto'),
     canal: valorChips('canal', 'canal-otro'),
-    producto: valorSelect('producto'),
-    cantidad: cant > 0 ? cant : 1,
-    detalles: v('detalles'),
+    producto: comp.producto, cantidad: comp.cantidad, detalles: comp.detalles,
     total: soloNumero($('#total').value), pago: soloNumero($('#pago').value),
     metodoPago: valorChips('metodo', 'metodo-otro'),
     entregaFecha: v('entregaFecha'), entregaTipo: tipo,
@@ -705,11 +771,14 @@ function leerFormulario() {
     fecha: v('fecha') || hoyISO(), estado: v('estado') || 'Recibido', notas: v('notas')
   };
 }
-function validar(d) {
+function validar(d, items) {
   var e = [];
   if (!d.cliente) e.push({ campo: 'cliente', msg: 'Escribe el nombre del cliente.' });
   if (!d.canal) e.push({ campo: 'canal', msg: 'Elige por dónde nos contactó.' });
-  if (!d.producto) e.push({ campo: 'producto', msg: 'Elige o escribe el producto.' });
+  items.forEach(function (it, i) {
+    if (!it.nombre) e.push({ campo: 'producto', itemEl: it.el, msg: items.length > 1 ? 'Elige o escribe el producto ' + (i + 1) + '.' : 'Elige o escribe el producto.' });
+  });
+  if (d.producto.length > 160 || d.detalles.length > 600) e.push({ campo: 'items', msg: 'Son demasiados productos o detalles para una sola fila de la hoja. Divide el pedido en dos.' });
   if (!d.total) e.push({ campo: 'total', msg: 'Escribe el valor total.' });
   if (d.pago > d.total && d.total) e.push({ campo: 'pago', msg: 'Lo pagado no puede ser más que el total.' });
   if (!d.entregaFecha) e.push({ campo: 'entregaFecha', msg: 'Elige la fecha de entrega.' });
@@ -718,20 +787,29 @@ function validar(d) {
   return e;
 }
 function mostrarErrores(errs) {
-  $$('.err[data-for]').forEach(function (p) { p.textContent = ''; });
+  $$('.err[data-for], .it-err').forEach(function (p) { p.textContent = ''; });
   $$('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
   errs.forEach(function (x) {
+    if (x.itemEl) {
+      $('.it-err', x.itemEl).textContent = x.msg;
+      $('.it-producto', x.itemEl).setAttribute('aria-invalid', 'true');
+      if (!$('.it-otro', x.itemEl).hidden) $('.it-otro', x.itemEl).setAttribute('aria-invalid', 'true');
+      return;
+    }
     var p = $('.err[data-for="' + x.campo + '"]'); if (p) p.textContent = x.msg;
     var el = $('#' + x.campo); if (el && el.matches('input,select,textarea')) el.setAttribute('aria-invalid', 'true');
   });
   if (errs.length) {
-    var primero = $('#' + errs[0].campo) || $('.err[data-for="' + errs[0].campo + '"]');
+    var x0 = errs[0], primero;
+    if (x0.itemEl) primero = $('.it-otro', x0.itemEl).hidden ? $('.it-producto', x0.itemEl) : $('.it-otro', x0.itemEl);
+    else primero = $('#' + x0.campo) || $('.err[data-for="' + x0.campo + '"]');
     if (primero) { primero.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (primero.focus) primero.focus({ preventScroll: true }); }
   }
 }
 function limpiarFormulario() {
   $('#form').reset();
-  ['canal-otro', 'producto-otro', 'metodo-otro', 'transportadora-otro'].forEach(function (id) { $('#' + id).hidden = true; });
+  ['canal-otro', 'metodo-otro', 'transportadora-otro'].forEach(function (id) { $('#' + id).hidden = true; });
+  $('#items').innerHTML = ''; agregarItem();
   $('#fecha').value = hoyISO();
   actualizarSaldo(); actualizarEntrega(); mostrarErrores([]);
 }
@@ -758,7 +836,9 @@ function mensajeCliente(p) {
   var debe = typeof p.debe === 'number' ? p.debe : Math.max(0, (p.total || 0) - (p.pago || 0));
   var l = ['Hola ' + nombre + ', te escribe Yi Shu Studio. Tu pedido quedó registrado:', ''];
   if (p.id) l.push('Pedido: ' + p.id);
-  l.push('Producto: ' + p.producto + (p.cantidad > 1 ? ' x' + p.cantidad : ''));
+  var prods = String(p.producto || '').split(' + ');
+  if (prods.length > 1) { l.push('Productos:'); prods.forEach(function (x) { l.push('- ' + x); }); }
+  else l.push('Producto: ' + p.producto + (p.cantidad > 1 ? ' x' + p.cantidad : ''));
   l.push('Valor total: ' + dinero(p.total));
   if (p.pago > 0) l.push('Pagado: ' + dinero(p.pago));
   l.push(debe > 0 ? 'Saldo pendiente: ' + dinero(debe) : 'Pago completo, gracias.');
@@ -799,7 +879,7 @@ function mostrarGuardado(p, info) {
 
 function onGuardar(ev) {
   ev.preventDefault();
-  var d = leerFormulario(), errs = validar(d);
+  var items = leerItems(), d = leerFormulario(items), errs = validar(d, items);
   mostrarErrores(errs);
   if (errs.length) return;
   var btn = $('#btn-guardar');
@@ -920,7 +1000,7 @@ function tarjeta(p) {
     (p.notas ? '<div class="fila"><b>Notas</b><span>' + esc(p.notas) + '</span></div>' : '');
 
   if (p.pendiente) {
-    return '<article class="pedido"><div class="pedido-top"><div><p class="id">SIN ENVIAR A LA HOJA</p><h3>' + esc(p.cliente) + '</h3><p class="prod">' + esc(p.producto) + (p.cantidad > 1 ? ' × ' + p.cantidad : '') + '</p></div>' +
+    return '<article class="pedido"><div class="pedido-top"><div><p class="id">SIN ENVIAR A LA HOJA</p><h3>' + esc(p.cliente) + '</h3><p class="prod">' + esc(textoProducto(p)) + '</p></div>' +
       '<div class="badges"><span class="badge b-late">Pendiente</span></div></div><div class="filas">' + filas + '</div>' +
       (p.error ? '<p class="err">La hoja lo rechazó: ' + esc(p.error) + '</p>' : '') +
       '<div class="acciones"><button class="btn small" type="button" data-accion="reintentar">Reintentar envío</button>' +
@@ -928,7 +1008,7 @@ function tarjeta(p) {
       '<button class="btn small ghost" type="button" data-accion="quitar-pend" data-ref="' + esc(p.ref) + '">Quitar</button></div></article>';
   }
   var opciones = ESTADOS.map(function (e) { return '<option' + (e === p.estado ? ' selected' : '') + '>' + esc(e) + '</option>'; }).join('');
-  return '<article class="pedido"><div class="pedido-top"><div><p class="id">' + esc(p.id) + '</p><h3>' + esc(p.cliente) + '</h3><p class="prod">' + esc(p.producto) + (p.cantidad > 1 ? ' × ' + p.cantidad : '') + '</p></div>' +
+  return '<article class="pedido"><div class="pedido-top"><div><p class="id">' + esc(p.id) + '</p><h3>' + esc(p.cliente) + '</h3><p class="prod">' + esc(textoProducto(p)) + '</p></div>' +
     '<div class="badges">' + badgeEstado(p) + '</div></div><div class="filas">' + filas + '</div>' +
     '<div class="acciones">' +
     ((p.debe || 0) > 0 && p.estado !== 'Cancelado' ? '<button class="btn small" type="button" data-accion="pagar" data-id="' + esc(p.id) + '">Registrar pago</button>' : '') +
@@ -1057,14 +1137,14 @@ function irA(vista) {
 
 /* Arranque */
 function iniciar() {
-  pintarListas(); pintarFiltros();
+  pintarListas(); pintarFiltros(); agregarItem();
   $('#fecha').value = hoyISO();
   ligarDinero($('#total'), actualizarSaldo); ligarDinero($('#pago'), actualizarSaldo); ligarDinero($('#pago-monto'));
 
   $('#form').addEventListener('submit', onGuardar);
   $('#btn-limpiar').addEventListener('click', function () { if (confirm('¿Borrar todo lo que escribiste en este pedido?')) limpiarFormulario(); });
-  $('#cant-menos').addEventListener('click', function () { var i = $('#cantidad'); i.value = Math.max(1, (parseInt(i.value, 10) || 1) - 1); });
-  $('#cant-mas').addEventListener('click', function () { var i = $('#cantidad'); i.value = Math.min(999, (parseInt(i.value, 10) || 1) + 1); });
+  $('#items').addEventListener('click', onItemsClick);
+  $('#btn-agregar-item').addEventListener('click', function () { var el = agregarItem(); $('.it-producto', el).focus(); });
   $('#pago-todo').addEventListener('click', function () { ponerDinero($('#pago'), soloNumero($('#total').value)); actualizarSaldo(); });
   $('#pago-mitad').addEventListener('click', function () { ponerDinero($('#pago'), Math.round(soloNumero($('#total').value) / 2)); actualizarSaldo(); });
   $('#pago-nada').addEventListener('click', function () { $('#pago').value = ''; actualizarSaldo(); });
