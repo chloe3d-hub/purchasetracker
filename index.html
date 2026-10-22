@@ -83,6 +83,11 @@ select{appearance:none;-webkit-appearance:none;padding-right:40px;
 input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,summary:focus-visible{
   outline:2px solid var(--red);outline-offset:2px}
 [aria-invalid=true]{background:var(--red-soft) !important}
+.fecha-wrap{position:relative}
+.fecha-wrap input[type=text]{padding-right:52px;font-variant-numeric:tabular-nums}
+.cal-btn{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;background:transparent;border:0;border-radius:12px;color:var(--muted);cursor:pointer}
+.cal-btn:hover{color:var(--text)}
+.cal-sel{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;padding:0;pointer-events:none}
 .money{position:relative}
 .money::before{content:'$';position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-weight:800;pointer-events:none}
 .money input{padding-left:30px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -106,6 +111,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .item-head{display:none;justify-content:space-between;align-items:center;gap:10px}
 .items.multi .item{background:#0f0f10;border-radius:14px;padding:14px}
 .items.multi .item-head{display:flex}
+.opc{font-weight:500;opacity:.8}
 .item-titulo{font-family:'Big Shoulders Stencil Display',Impact,'Arial Narrow',sans-serif;font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
 .btn.add{width:100%;background:var(--surface-2);color:var(--text)}
 .stepper{display:grid;grid-template-columns:48px 1fr 48px;gap:8px}
@@ -242,7 +248,12 @@ details .stack{padding-bottom:14px}
             </div>
             <div class="field">
               <label for="fecha">Fecha del pedido</label>
-              <input id="fecha" name="fecha" type="date">
+              <div class="fecha-wrap">
+                <input id="fecha" name="fecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" data-fecha>
+                <button type="button" class="cal-btn" data-cal="fecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+                <input type="date" class="cal-sel" id="fecha-sel" tabindex="-1" aria-hidden="true">
+              </div>
+              <p class="err" data-for="fecha"></p>
             </div>
           </div>
           <div class="field">
@@ -306,7 +317,11 @@ details .stack{padding-bottom:14px}
         <div class="stack">
           <div class="field">
             <label for="entregaFecha">Fecha de entrega <span class="req">*</span></label>
-            <input id="entregaFecha" name="entregaFecha" type="date">
+            <div class="fecha-wrap">
+              <input id="entregaFecha" name="entregaFecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" data-fecha>
+              <button type="button" class="cal-btn" data-cal="entregaFecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+              <input type="date" class="cal-sel" id="entregaFecha-sel" tabindex="-1" aria-hidden="true">
+            </div>
             <div class="quick" aria-label="Atajos de fecha">
               <button type="button" data-dias="3">En 3 días</button>
               <button type="button" data-dias="7">En 1 semana</button>
@@ -446,7 +461,7 @@ details .stack{padding-bottom:14px}
       <summary>Editar mis listas</summary>
       <div class="stack">
         <p class="hint">Una opción por línea. "Otro" siempre se agrega solo.</p>
-        <div class="field"><label for="lista-productos">Productos</label><textarea id="lista-productos" rows="6"></textarea></div>
+        <div class="field"><label for="lista-productos">Categorías de producto</label><textarea id="lista-productos" rows="6"></textarea></div>
         <div class="field"><label for="lista-canales">Canales de contacto</label><textarea id="lista-canales" rows="5"></textarea></div>
         <div class="field"><label for="lista-metodos">Métodos de pago</label><textarea id="lista-metodos" rows="4"></textarea></div>
         <div class="field"><label for="lista-transportadoras">Transportadoras o medios de envío</label><textarea id="lista-transportadoras" rows="5"></textarea></div>
@@ -487,12 +502,12 @@ var CONFIG = {
 var ESTADOS = ['Recibido', 'En producción', 'Listo para entrega', 'Enviado', 'Entregado', 'Cancelado'];
 var OTRO = '__otro__';
 var LISTAS_BASE = {
-  productos: ['Máscara calavera', 'Máscara gato', 'Máscara low-poly', 'Soporte QR/NFC', 'Tríptico de árboles', 'Aretes oni', 'Paisaje japonés', 'Lámpara', 'Pedido personalizado'],
-  canales: ['Instagram', 'WhatsApp', 'TikTok', 'Feria', 'Referido', 'MercadoLibre'],
+  productos: ['Máscaras', 'Aretes', 'Cuadros', 'Mascotas', 'Decoración para la Casa', 'Gaming', 'Lámparas', 'Negocios', 'Organizadores', 'Regreso a Clases', 'Halloween', 'Navidad', 'Smokeshop'],
+  canales: ['Marketplace', 'WhatsApp', 'MercadoLibre', 'TikTok', 'Instagram', 'Feria', 'Referido'],
   metodos: ['Nequi', 'Daviplata', 'Transferencia', 'Efectivo'],
   transportadoras: ['Servientrega', 'Interrapidísimo', 'Coordinadora', 'Envía', 'Moto mensajero']
 };
-var LS = { cfg: 'ys.cfg.v1', listas: 'ys.listas.v1', pend: 'ys.pend.v1', cache: 'ys.cache.v1' };
+var LS = { cfg: 'ys.cfg.v1', listas: 'ys.listas.v2', pend: 'ys.pend.v1', cache: 'ys.cache.v1' };
 
 /* Utilidades */
 function $(s, r) { return (r || document).querySelector(s); }
@@ -516,6 +531,48 @@ function nuevoRef() {
 /* Fechas (siempre en hora local, sin saltos por zona horaria) */
 function hoyISO() { var d = new Date(); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 function parseISO(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; }
+/* Fechas que ve y escribe Lorena: siempre día/mes/año. Por dentro viajan como aaaa-mm-dd. */
+function textoDeIso(iso) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
+function isoDeTexto(t) {
+  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(String(t || '').trim()); if (!m) return null;
+  var d = +m[1], mo = +m[2], a = +m[3];
+  if (a < 2000 || a > 2100 || mo < 1 || mo > 12 || d < 1) return null;
+  var f = new Date(a, mo - 1, d);
+  if (f.getFullYear() !== a || f.getMonth() !== mo - 1 || f.getDate() !== d) return null;
+  return a + '-' + pad(mo) + '-' + pad(d);
+}
+function ponerFecha(id, iso) { $('#' + id).value = textoDeIso(iso); var sel = $('#' + id + '-sel'); if (sel) sel.value = iso || ''; }
+/* Pone las barras mientras escribe. Acepta 21102026 o 21/10/2026 o 5/1/2027 (separa con / - . o espacio). */
+function darFormatoFecha(txt) {
+  var max = [2, 2, 4], partes = ['', '', ''], i = 0;
+  for (var k = 0; k < txt.length; k++) {
+    var c = txt.charAt(k);
+    if (/\d/.test(c)) {
+      if (partes[i].length === max[i]) { if (i === 2) continue; i++; }
+      partes[i] += c;
+    } else if (partes[i].length > 0 && i < 2) { i++; }
+  }
+  return partes.slice(0, i + 1).join('/');
+}
+function formatearFecha(inp) {
+  var v = inp.value, pos = inp.selectionStart, f = darFormatoFecha(v);
+  if (f === v) return;
+  inp.value = f;
+  var np = darFormatoFecha(v.slice(0, pos == null ? v.length : pos)).length;
+  try { inp.setSelectionRange(np, np); } catch (e) {}
+}
+function normalizarFecha(inp) { var iso = isoDeTexto(inp.value); if (iso) ponerFecha(inp.id, iso); }
+function ligarFecha(id) {
+  var inp = $('#' + id), sel = $('#' + id + '-sel'), btn = $('[data-cal="' + id + '"]');
+  inp.addEventListener('input', function () { formatearFecha(inp); });
+  inp.addEventListener('blur', function () { normalizarFecha(inp); });
+  sel.addEventListener('change', function () { if (sel.value) ponerFecha(id, sel.value); });
+  btn.addEventListener('click', function () {
+    sel.value = isoDeTexto(inp.value) || '';
+    try { if (sel.showPicker) { sel.showPicker(); return; } } catch (e) {}
+    try { sel.focus(); sel.click(); } catch (e) {}
+  });
+}
 function sumarDias(iso, n) { var d = parseISO(iso); d.setDate(d.getDate() + n); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 function diasHasta(iso) { var d = parseISO(iso); if (!d) return null; return Math.round((d - parseISO(hoyISO())) / 86400000); }
 function fechaCorta(iso) {
@@ -659,13 +716,18 @@ function ponerDinero(inp, n) { inp.value = n > 0 ? miles(n) : ''; }
 /* Formulario: productos del pedido (uno o varios) */
 var itemSeq = 0;
 function poblarProducto(el) {
-  var sel = $('.it-producto', el), otro = $('.it-otro', el), actual = sel.value;
-  sel.innerHTML = '<option value="">Elige un producto</option>' +
+  var sel = $('.it-producto', el), actual = sel.value;
+  sel.innerHTML = '<option value="">Elige la categoría</option>' +
     S.listas.productos.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('') +
-    '<option value="' + OTRO + '">Otro…</option>';
+    '<option value="' + OTRO + '">Otra…</option>';
   if (actual && (actual === OTRO || S.listas.productos.indexOf(actual) >= 0)) sel.value = actual;
-  otro.hidden = sel.value !== OTRO;
-  sel.onchange = function () { otro.hidden = sel.value !== OTRO; if (!otro.hidden) otro.focus(); };
+  etiquetaCual(el);
+  sel.onchange = function () { etiquetaCual(el); if (sel.value === OTRO) $('.it-cual', el).focus(); };
+}
+function etiquetaCual(el) {
+  var otra = $('.it-producto', el).value === OTRO, i = $('.it-cual', el);
+  $('.it-cual-lbl', el).innerHTML = otra ? '¿Qué producto es? <span class="req">*</span>' : '¿Cuál es? <span class="opc">(si quieres anotarlo)</span>';
+  i.placeholder = otra ? 'Escribe el producto' : 'Ej: oni rojos, Stitch, ola japonesa';
 }
 function repoblarItems() { $$('#items [data-item]').forEach(poblarProducto); }
 function actualizarItems() {
@@ -682,15 +744,16 @@ function agregarItem() {
   el.innerHTML =
     '<div class="item-head"><span class="item-titulo">Producto</span><button type="button" class="btn small ghost item-quitar">Quitar</button></div>' +
     '<div class="grid2 collapse">' +
-      '<div class="field"><label for="it-prod-' + k + '">Producto <span class="req">*</span></label>' +
-        '<select class="it-producto" id="it-prod-' + k + '"></select>' +
-        '<input type="text" class="it-otro" id="it-otro-' + k + '" placeholder="¿Qué producto es?" aria-label="Nombre del producto" hidden>' +
-        '<p class="err it-err"></p></div>' +
+      '<div class="field"><label for="it-prod-' + k + '">Categoría <span class="req">*</span></label>' +
+        '<select class="it-producto" id="it-prod-' + k + '"></select></div>' +
       '<div class="field"><span class="lbl" id="it-lbl-' + k + '">Cantidad</span>' +
         '<div class="stepper"><button type="button" class="it-menos" aria-label="Una menos">&minus;</button>' +
         '<input type="number" class="it-cant" min="1" max="999" value="1" inputmode="numeric" aria-labelledby="it-lbl-' + k + '">' +
         '<button type="button" class="it-mas" aria-label="Una más">+</button></div></div>' +
     '</div>' +
+    '<div class="field"><label for="it-cual-' + k + '" class="it-cual-lbl">¿Cuál es?</label>' +
+      '<input type="text" class="it-cual" id="it-cual-' + k + '" autocomplete="off" maxlength="80">' +
+      '<p class="err it-err"></p></div>' +
     '<div class="field"><label for="it-det-' + k + '">Detalles (color, tamaño, personalización)</label>' +
       '<textarea class="it-detalles" id="it-det-' + k + '" rows="2"></textarea></div>';
   $('#items').appendChild(el);
@@ -699,10 +762,10 @@ function agregarItem() {
 }
 function leerItems() {
   return $$('#items [data-item]').map(function (el) {
-    var sel = $('.it-producto', el), cant = parseInt($('.it-cant', el).value, 10);
+    var cat = $('.it-producto', el).value, cual = $('.it-cual', el).value.trim(), cant = parseInt($('.it-cant', el).value, 10);
     return {
-      el: el,
-      nombre: sel.value === OTRO ? $('.it-otro', el).value.trim() : sel.value,
+      el: el, cat: cat, cual: cual,
+      nombre: cat === OTRO ? cual : (cual ? cat + ' (' + cual + ')' : cat),
       cantidad: cant > 0 ? cant : 1,
       detalles: $('.it-detalles', el).value.trim()
     };
@@ -765,10 +828,10 @@ function leerFormulario(items) {
     producto: comp.producto, cantidad: comp.cantidad, detalles: comp.detalles,
     total: soloNumero($('#total').value), pago: soloNumero($('#pago').value),
     metodoPago: valorChips('metodo', 'metodo-otro'),
-    entregaFecha: v('entregaFecha'), entregaTipo: tipo,
+    entregaFecha: isoDeTexto(v('entregaFecha')) || '', entregaTipo: tipo,
     entregaVia: tipo === 'Envío' ? valorSelect('transportadora') : (tipo === 'Recogida' ? v('puntoRecogida') : ''),
     direccion: tipo === 'Envío' ? v('direccion') : '',
-    fecha: v('fecha') || hoyISO(), estado: v('estado') || 'Recibido', notas: v('notas')
+    fecha: isoDeTexto(v('fecha')) || hoyISO(), estado: v('estado') || 'Recibido', notas: v('notas')
   };
 }
 function validar(d, items) {
@@ -776,12 +839,18 @@ function validar(d, items) {
   if (!d.cliente) e.push({ campo: 'cliente', msg: 'Escribe el nombre del cliente.' });
   if (!d.canal) e.push({ campo: 'canal', msg: 'Elige por dónde nos contactó.' });
   items.forEach(function (it, i) {
-    if (!it.nombre) e.push({ campo: 'producto', itemEl: it.el, msg: items.length > 1 ? 'Elige o escribe el producto ' + (i + 1) + '.' : 'Elige o escribe el producto.' });
+    var n = items.length > 1 ? ' del producto ' + (i + 1) : '';
+    if (!it.cat) e.push({ campo: 'producto', itemEl: it.el, donde: 'cat', msg: 'Elige la categoría' + n + '.' });
+    else if (it.cat === OTRO && !it.cual) e.push({ campo: 'producto', itemEl: it.el, donde: 'cual', msg: 'Escribe qué producto es' + n + '.' });
   });
   if (d.producto.length > 160 || d.detalles.length > 600) e.push({ campo: 'items', msg: 'Son demasiados productos o detalles para una sola fila de la hoja. Divide el pedido en dos.' });
   if (!d.total) e.push({ campo: 'total', msg: 'Escribe el valor total.' });
   if (d.pago > d.total && d.total) e.push({ campo: 'pago', msg: 'Lo pagado no puede ser más que el total.' });
-  if (!d.entregaFecha) e.push({ campo: 'entregaFecha', msg: 'Elige la fecha de entrega.' });
+  var ftxt = $('#fecha').value.trim(), etxt = $('#entregaFecha').value.trim();
+  var msgFecha = 'Escribe la fecha como día/mes/año, por ejemplo 21/10/2026.';
+  if (ftxt && !isoDeTexto(ftxt)) e.push({ campo: 'fecha', msg: msgFecha });
+  if (!etxt) e.push({ campo: 'entregaFecha', msg: 'Elige la fecha de entrega.' });
+  else if (!isoDeTexto(etxt)) e.push({ campo: 'entregaFecha', msg: msgFecha });
   if (!d.entregaTipo) e.push({ campo: 'entregaTipo', msg: 'Elige si es envío o recogida.' });
   if (d.entregaTipo === 'Envío' && !d.entregaVia) e.push({ campo: 'transportadora', msg: 'Elige por dónde se envía.' });
   return e;
@@ -792,8 +861,7 @@ function mostrarErrores(errs) {
   errs.forEach(function (x) {
     if (x.itemEl) {
       $('.it-err', x.itemEl).textContent = x.msg;
-      $('.it-producto', x.itemEl).setAttribute('aria-invalid', 'true');
-      if (!$('.it-otro', x.itemEl).hidden) $('.it-otro', x.itemEl).setAttribute('aria-invalid', 'true');
+      $(x.donde === 'cual' ? '.it-cual' : '.it-producto', x.itemEl).setAttribute('aria-invalid', 'true');
       return;
     }
     var p = $('.err[data-for="' + x.campo + '"]'); if (p) p.textContent = x.msg;
@@ -801,7 +869,7 @@ function mostrarErrores(errs) {
   });
   if (errs.length) {
     var x0 = errs[0], primero;
-    if (x0.itemEl) primero = $('.it-otro', x0.itemEl).hidden ? $('.it-producto', x0.itemEl) : $('.it-otro', x0.itemEl);
+    if (x0.itemEl) primero = $(x0.donde === 'cual' ? '.it-cual' : '.it-producto', x0.itemEl);
     else primero = $('#' + x0.campo) || $('.err[data-for="' + x0.campo + '"]');
     if (primero) { primero.scrollIntoView({ block: 'center', behavior: 'smooth' }); if (primero.focus) primero.focus({ preventScroll: true }); }
   }
@@ -810,7 +878,7 @@ function limpiarFormulario() {
   $('#form').reset();
   ['canal-otro', 'metodo-otro', 'transportadora-otro'].forEach(function (id) { $('#' + id).hidden = true; });
   $('#items').innerHTML = ''; agregarItem();
-  $('#fecha').value = hoyISO();
+  ponerFecha('fecha', hoyISO());
   actualizarSaldo(); actualizarEntrega(); mostrarErrores([]);
 }
 
@@ -1121,7 +1189,9 @@ function guardarConfig() {
   S.cfg = { url: url, clave: clave, hoja: hoja }; guardar(LS.cfg, S.cfg);
   var nuevas = { productos: lineas('lista-productos'), canales: lineas('lista-canales'), metodos: lineas('lista-metodos'), transportadoras: lineas('lista-transportadoras') };
   Object.keys(nuevas).forEach(function (k) { if (!nuevas[k].length) nuevas[k] = LISTAS_BASE[k]; });
-  S.listas = nuevas; guardar(LS.listas, S.listas);
+  var propias = {};
+  Object.keys(nuevas).forEach(function (k) { if (nuevas[k].join('\n') !== LISTAS_BASE[k].join('\n')) propias[k] = nuevas[k]; });
+  S.listas = Object.assign({}, LISTAS_BASE, propias); guardar(LS.listas, propias);
   pintarListas(); cerrar($('#dlg-config')); toast('Guardado.');
   cargar(false).then(function () { return enviarPendientes(true); });
 }
@@ -1138,7 +1208,7 @@ function irA(vista) {
 /* Arranque */
 function iniciar() {
   pintarListas(); pintarFiltros(); agregarItem();
-  $('#fecha').value = hoyISO();
+  ponerFecha('fecha', hoyISO()); ligarFecha('fecha'); ligarFecha('entregaFecha');
   ligarDinero($('#total'), actualizarSaldo); ligarDinero($('#pago'), actualizarSaldo); ligarDinero($('#pago-monto'));
 
   $('#form').addEventListener('submit', onGuardar);
@@ -1148,7 +1218,7 @@ function iniciar() {
   $('#pago-todo').addEventListener('click', function () { ponerDinero($('#pago'), soloNumero($('#total').value)); actualizarSaldo(); });
   $('#pago-mitad').addEventListener('click', function () { ponerDinero($('#pago'), Math.round(soloNumero($('#total').value) / 2)); actualizarSaldo(); });
   $('#pago-nada').addEventListener('click', function () { $('#pago').value = ''; actualizarSaldo(); });
-  $$('[data-dias]').forEach(function (b) { b.addEventListener('click', function () { $('#entregaFecha').value = sumarDias(hoyISO(), parseInt(b.dataset.dias, 10)); }); });
+  $$('[data-dias]').forEach(function (b) { b.addEventListener('click', function () { ponerFecha('entregaFecha', sumarDias(hoyISO(), parseInt(b.dataset.dias, 10))); }); });
   $$('input[name="entregaTipo"]').forEach(function (r) { r.addEventListener('change', actualizarEntrega); });
 
   $('#tab-nuevo').addEventListener('click', function () { irA('nuevo'); });
