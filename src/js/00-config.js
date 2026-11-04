@@ -6,8 +6,10 @@ var CONFIG = {
   URL_HOJA: ''
 };
 
-var APP_VERSION = '3.0';
+var APP_VERSION = '4.0';
 var URL_PUBLICA = 'https://chloe3d-hub.github.io/purchasetracker/';
+/* Lista de productos del catálogo web (mismo sitio de GitHub Pages). Solo sirve para sugerir nombres al crear fichas. */
+var CATALOGO_URL = 'https://chloe3d-hub.github.io/Catalogo/data/products.json';
 var ESTADOS = ['Recibido', 'En producción', 'Listo para entrega', 'Enviado', 'Entregado', 'Cancelado'];
 var OTRO = '__otro__';
 var LISTAS_BASE = {
@@ -20,15 +22,17 @@ var LISTAS_BASE = {
 var CONFIG_BASE = {
   impresoras: [{ nombre: 'Flashforge Creator 5', costoHora: 0 }, { nombre: 'Bambu Lab P1S', costoHora: 0 }],
   costoGramo: 0,
+  luzKwh: 0,
   empaque: 0,
+  componentes: [],
   listas: {},
-  gastoCategorias: ['Filamento', 'Empaques', 'Envíos', 'Publicidad', 'Repuestos y mantenimiento', 'Electricidad', 'Equipos y herramientas', 'Otros'],
+  gastoCategorias: ['Filamento', 'Empaques', 'Envíos', 'Publicidad', 'Repuestos y mantenimiento', 'Electricidad', 'Equipos y herramientas', 'Componentes electrónicos', 'Otros'],
   calendario: false,
   resumen: false,
   resumenHora: 7,
   resumenEmail: '',
   respaldo: false
 };
-var LS = { cfg: 'ys.cfg.v1', listas: 'ys.listas.v2', pend: 'ys.pend.v1', pendg: 'ys.pendg.v1', cache: 'ys.cache.v1', datos: 'ys.datos.v3', migrado: 'ys.migrado.v3', ultimaVista: 'ys.vista.v3' };
+var LS = { cfg: 'ys.cfg.v1', listas: 'ys.listas.v2', pend: 'ys.pend.v1', pendg: 'ys.pendg.v1', cache: 'ys.cache.v1', datos: 'ys.datos.v3', migrado: 'ys.migrado.v3', ultimaVista: 'ys.vista.v3', catalogo: 'ys.catalogo.v1' };
 var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 var MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];

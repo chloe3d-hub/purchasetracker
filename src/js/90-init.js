@@ -8,7 +8,7 @@ function renderTodo() {
   c2.textContent = cola; c2.hidden = !cola;
   var bc = $('#bloque-costos-nuevo'); if (bc) bc.hidden = !esV3();
   var f = document.activeElement;
-  if (S.vista === 'produccion' && f && f.matches && f.matches('[data-prod]')) return;   // no pisar lo que está escribiendo
+  if (S.vista === 'produccion' && f && f.matches && f.matches('[data-prod], [data-prod-ficha]')) return;   // no pisar lo que está escribiendo
   var pinta = { pedidos: renderPedidos, calendario: renderCalendario, produccion: renderProduccion, numeros: renderNumeros, ajustes: pintarAjustesEstado }[S.vista];
   if (pinta) pinta();
 }
@@ -58,7 +58,7 @@ function iniciar() {
   ligarCostos('c-', function () { return soloNumero($('#total').value); });
   ligarCostos('ed-c-', function () { return soloNumero($('#ed-total').value); });
 
-  pintarListas(); pintarFiltros(); agregarItem();
+  pintarListas(); pintarFiltros(); agregarItem(); pintarBloquesFichas();
   ['fecha', 'entregaFecha', 'ed-fecha', 'ed-entregaFecha', 'g-fecha'].forEach(ligarFecha);
   ponerFecha('fecha', hoyISO());
   ligarDinero($('#total'), function () { actualizarSaldo(); pintarResumenCostos('c-', soloNumero($('#total').value)); });

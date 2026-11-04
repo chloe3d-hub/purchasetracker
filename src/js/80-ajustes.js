@@ -19,7 +19,8 @@ function mensajeDe(e) {
 /* Conexión */
 function nombreVersion() {
   if (!S.cfg.url || !S.cfg.clave) return 'Aún no hay una hoja conectada en este dispositivo.';
-  if (S.version >= 3) return 'Script de la hoja: versión ' + S.version + '. Está al día, tienes todas las funciones.';
+  if (S.version >= 4) return 'Script de la hoja: versión ' + S.version + '. Está al día, tienes todas las funciones.';
+  if (S.version === 3) return 'Script de la hoja: versión 3. Todo lo anterior funciona, pero faltan las fichas de costo, el precio de la luz y los componentes (actualízalo con los pasos de abajo).';
   if (S.version === 2) return 'Script de la hoja: versión anterior. Los pedidos funcionan, pero faltan el calendario de Google, los costos, los gastos y el resumen por correo.';
   return 'Todavía no sé qué versión del script tiene tu hoja. Toca "Probar conexión".';
 }
@@ -32,7 +33,7 @@ function probarConexion() {
   return api('ping', {}, cfg).then(function (r) {
     var v = r.version || 2;
     out.textContent = 'Conectado. La pestaña "' + r.hoja + '" tiene ' + plural(r.pedidos, 'pedido', 'pedidos') + '. ' +
-      (v >= 3 ? 'El script está en la versión ' + v + '.' : 'El script es de la versión anterior; para usar todo lo nuevo hay que actualizarlo.');
+      (v >= 4 ? 'El script está en la versión ' + v + ', al día.' : (v === 3 ? 'El script es la versión 3: funciona, pero para usar las fichas de costo hay que actualizarlo a la 4.' : 'El script es de la versión anterior; para usar todo lo nuevo hay que actualizarlo.'));
     out.className = 'prueba ok';
   }, function (e) { out.textContent = e.message; out.className = 'prueba mal'; });
 }
@@ -48,7 +49,7 @@ function guardarConexion() {
 }
 function olvidarConexion() {
   if (!confirm('¿Desconectar este dispositivo? Se borra de aquí la conexión y los pedidos guardados en la memoria del teléfono. Tu hoja de Google no se toca.')) return;
-  S.cfg = { url: '', clave: '', hoja: '' }; S.version = 0; S.cache = []; S.gastos = []; S.auto = null;
+  S.cfg = { url: '', clave: '', hoja: '' }; S.version = 0; S.cache = []; S.gastos = []; S.fichas = []; S.auto = null;
   S.config = clonar(CONFIG_BASE); aplicarListas();
   guardar(LS.cfg, S.cfg); guardar(LS.cache, []); guardarDatos();
   ponerConexion('sinconfig'); pintarListas(); llenarAjustes(); renderTodo(); toast('Dispositivo desconectado.');
@@ -93,19 +94,55 @@ function compartirEnlace() {
 
 /* Costos */
 function filaImpresora(i) {
+  var num = function (v) { return Number(v) > 0 ? esc(numTxt(v)) : ''; };
   return '<div class="imp-fila" data-imp>' +
     '<div class="field"><label>Nombre<input type="text" class="imp-nombre" maxlength="40" autocomplete="off" value="' + esc(i.nombre) + '"></label></div>' +
-    '<div class="field"><label>Costo por hora<span class="money"><input type="text" class="imp-costo" inputmode="decimal" autocomplete="off" value="' + (Number(i.costoHora) > 0 ? esc(numTxt(i.costoHora)) : '') + '"></span></label></div>' +
-    '<button type="button" class="btn small ghost imp-quitar">Quitar</button></div>';
+    '<div class="field"><label>Costo por hora<span class="money"><input type="text" class="imp-costo" inputmode="decimal" autocomplete="off" value="' + num(i.costoHora) + '"></span></label></div>' +
+    '<button type="button" class="btn small ghost imp-quitar">Quitar</button>' +
+    '<details class="imp-calc"' + (esV4() ? '' : ' hidden') + '><summary>Calcular el costo por hora</summary><div class="stack">' +
+      '<p class="hint">Luz + desgaste + mantenimiento. La luz usa el precio por kWh de arriba. El desgaste es lo que costó la impresora dividido entre las horas de vida que decidas asumir: no hay una cifra oficial, es tu supuesto.</p>' +
+      '<div class="grid2 collapse">' +
+        '<div class="field"><label>Lo que costó la impresora<span class="money"><input type="text" class="imp-precio" inputmode="numeric" autocomplete="off" value="' + (Number(i.precio) > 0 ? miles(i.precio) : '') + '"></span></label></div>' +
+        '<div class="field"><label>Horas de vida que asumes<input type="text" class="imp-vida" inputmode="decimal" autocomplete="off" value="' + num(i.vidaHoras) + '"></label></div>' +
+        '<div class="field"><label>Vatios promedio al imprimir<input type="text" class="imp-vatios" inputmode="decimal" autocomplete="off" value="' + num(i.vatios) + '"></label>' +
+          '<p class="hint">Lo más exacto: mide una impresión completa con un medidor de enchufe y calcula kWh ÷ horas × 1000.</p></div>' +
+        '<div class="field"><label>Mantenimiento por hora<span class="money"><input type="text" class="imp-mant" inputmode="numeric" autocomplete="off" value="' + (Number(i.mantenimientoHora) > 0 ? miles(i.mantenimientoHora) : '') + '"></span></label>' +
+          '<p class="hint">Boquillas, placas, correas. Déjalo vacío si no lo quieres contar.</p></div>' +
+      '</div>' +
+      '<div class="acciones"><button type="button" class="btn small imp-calcular">Calcular y usar este costo</button></div>' +
+      '<p class="hint imp-desglose" role="status"></p>' +
+    '</div></details></div>';
+}
+function ligarFilaImp(fila) { ligarDinero($('.imp-precio', fila)); ligarDinero($('.imp-mant', fila)); }
+function calcularCostoHoraImp(fila) {
+  var luz = decimalDe($('#cos-luz').value), w = decimalDe($('.imp-vatios', fila).value), vida = decimalDe($('.imp-vida', fila).value);
+  var precio = soloNumero($('.imp-precio', fila).value), mant = soloNumero($('.imp-mant', fila).value);
+  var out = $('.imp-desglose', fila);
+  if (!decimalOk($('.imp-vatios', fila).value) || !decimalOk($('.imp-vida', fila).value) || !decimalOk($('#cos-luz').value)) { out.textContent = 'Escribe solo números (por ejemplo 100 o 3000).'; return; }
+  var pLuz = w / 1000 * luz, pDes = vida > 0 ? precio / vida : 0, total = Math.round(pLuz + pDes + mant), falta = [];
+  if (!(luz > 0)) falta.push('el precio de la luz (arriba)');
+  if (!(w > 0)) falta.push('los vatios');
+  if (!(precio > 0) || !(vida > 0)) falta.push('el precio y las horas de vida de la impresora');
+  if (!(total > 0)) { out.textContent = 'Todavía no hay datos para calcular. Faltan: ' + falta.join(', ') + '.'; return; }
+  $('.imp-costo', fila).value = numTxt(total);
+  out.textContent = 'Luz ' + dinero(pLuz) + ' + desgaste ' + dinero(pDes) + ' + mantenimiento ' + dinero(mant) + ' = ' + dinero(total) + ' por hora.' +
+    (falta.length ? ' Faltan: ' + falta.join(', ') + '. Esa parte cuenta como $0.' : '') + ' Toca "Guardar costos" para que quede.';
 }
 function pintarCostosAjustes() {
   $('#cos-gramo').value = Number(S.config.costoGramo) > 0 ? numTxt(S.config.costoGramo) : '';
+  $('#cos-luz').value = Number(S.config.luzKwh) > 0 ? numTxt(S.config.luzKwh) : '';
+  $('#cos-luz').closest('.field').hidden = !esV4();
   ponerDinero($('#cos-empaque'), Number(S.config.empaque) || 0);
   $('#cos-imp').innerHTML = (S.config.impresoras || []).map(filaImpresora).join('');
+  $$('#cos-imp [data-imp]').forEach(ligarFilaImp);
 }
 function leerImpresoras() {
   return $$('#cos-imp [data-imp]').map(function (f) {
-    return { nombre: $('.imp-nombre', f).value.trim(), costoHora: decimalDe($('.imp-costo', f).value) };
+    var o = { nombre: $('.imp-nombre', f).value.trim(), costoHora: decimalDe($('.imp-costo', f).value) };
+    var datos = { precio: soloNumero($('.imp-precio', f).value), vidaHoras: decimalDe($('.imp-vida', f).value), vatios: decimalDe($('.imp-vatios', f).value), mantenimientoHora: soloNumero($('.imp-mant', f).value) };
+    Object.keys(datos).forEach(function (k) { if (datos[k] > 0) o[k] = datos[k]; });
+    o.malNumero = !decimalOk($('.imp-vida', f).value) || !decimalOk($('.imp-vatios', f).value) || !decimalOk($('.imp-costo', f).value);
+    return o;
   });
 }
 function guardarCostos() {
@@ -113,13 +150,18 @@ function guardarCostos() {
   imps.forEach(function (i) {
     if (!i.nombre) mal = 'Cada impresora necesita un nombre.';
     else if (vistos[i.nombre.toLowerCase()]) mal = 'La impresora "' + i.nombre + '" está repetida.';
+    else if (i.malNumero) mal = 'En "' + i.nombre + '" hay un número que no se entiende. Escribe solo dígitos, por ejemplo 3000 o 87,5.';
     vistos[i.nombre.toLowerCase()] = 1;
+    delete i.malNumero;
   });
+  if (!decimalOk($('#cos-gramo').value) || !decimalOk($('#cos-luz').value)) mal = 'El costo por gramo y el precio de la luz deben ser solo números, por ejemplo 68 o 875,05.';
   if (mal) { toast(mal, 'error'); return Promise.resolve(); }
+  var cambios = { impresoras: imps, costoGramo: decimalDe($('#cos-gramo').value), empaque: soloNumero($('#cos-empaque').value) };
+  if (esV4()) cambios.luzKwh = decimalDe($('#cos-luz').value);
   return trabajando($('#cos-guardar'), 'Guardando…', function () {
-    return api('config_guardar', { config: { impresoras: imps, costoGramo: decimalDe($('#cos-gramo').value), empaque: soloNumero($('#cos-empaque').value) } }).then(function (r) {
+    return api('config_guardar', { config: cambios }).then(function (r) {
       S.config = Object.assign(clonar(CONFIG_BASE), r.config || {}); guardarDatos(); pintarImpresoras('c-'); pintarImpresoras('ed-c-'); prellenarEmpaque();
-      pintarCostosAjustes(); toast('Costos guardados. Los pedidos nuevos usan estos precios.');
+      pintarCostosAjustes(); pintarFichas(); toast('Costos guardados. Los pedidos nuevos usan estos precios.');
     });
   }).catch(function (e) { toast(mensajeDe(e), 'error'); });
 }
@@ -259,14 +301,15 @@ function llenarAjustes() {
   $('#cfg-hoja').href = hojaUrl || '#'; $('#cfg-hoja').hidden = !hojaUrl;
   $('#cfg-prueba').textContent = ''; $('#cfg-prueba').className = 'prueba';
   $('#cel-qr').hidden = true; $('#cel-qr-btn').textContent = 'Mostrar código QR';
-  pintarCostosAjustes(); llenarListas(); pintarAjustesEstado(); pintarAuto(true);
+  pintarCostosAjustes(); pintarComponentes(); llenarListas(); pintarAjustesEstado(); pintarAuto(true);
+  cargarCatalogo(false);
 }
 function pintarAjustesEstado() {
   $('#aj-version').textContent = nombreVersion();
   var v3 = esV3();
   $('#aj-costos-v2').hidden = v3 || !S.cfg.url;
   $('#aj-costos-ok').hidden = !v3 && !!S.cfg.url;
-  pintarAuto(); pintarInstalar();
+  pintarFichas(); pintarAuto(); pintarInstalar();
   var tiene = !!enlaceCelular();
   $('#cel-sin-conexion').hidden = tiene; $('#cel-con-conexion').hidden = !tiene;
   $('#ver-app').textContent = 'Versión de la app ' + APP_VERSION;
@@ -294,14 +337,16 @@ function ligarAjustes() {
   $('#cos-agregar-imp').addEventListener('click', function () {
     if ($$('#cos-imp [data-imp]').length >= 12) { toast('Máximo 12 impresoras.', 'error'); return; }
     var d = document.createElement('div'); d.innerHTML = filaImpresora({ nombre: '', costoHora: 0 });
-    $('#cos-imp').appendChild(d.firstChild); var n = $$('#cos-imp .imp-nombre'); n[n.length - 1].focus();
+    $('#cos-imp').appendChild(d.firstChild); ligarFilaImp($('#cos-imp').lastChild); var n = $$('#cos-imp .imp-nombre'); n[n.length - 1].focus();
   });
   $('#cos-imp').addEventListener('click', function (ev) {
+    var c = ev.target.closest('.imp-calcular'); if (c) { calcularCostoHoraImp(c.closest('[data-imp]')); return; }
     var b = ev.target.closest('.imp-quitar'); if (!b) return;
     var fila = b.closest('[data-imp]'), nom = $('.imp-nombre', fila).value.trim();
     if (!nom || confirm('¿Quitar "' + nom + '" de la lista? Los pedidos que ya la usaron conservan su nombre.')) fila.remove();
   });
   ligarDinero($('#cos-empaque'));
+  ligarFichas();
   $('#cos-guardar').addEventListener('click', guardarCostos);
   $('#cos-recalcular').addEventListener('click', recalcularCostos);
   ligarAuto();

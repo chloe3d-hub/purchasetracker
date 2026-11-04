@@ -10,6 +10,8 @@ var S = {
   pendG: leer(LS.pendg, []),
   cache: leer(LS.cache, []),
   gastos: DATOS.gastos || [],
+  fichas: DATOS.fichas || [],                  // fichas de costo por producto (script versión 4)
+  catalogo: leer(LS.catalogo, { ts: 0, productos: [] }),
   conexion: 'sinconfig',
   vista: 'nuevo',
   filtro: 'activos', mes: '', busqueda: '', mensajeActual: '',
@@ -25,7 +27,8 @@ function aplicarListas() {
 }
 aplicarListas();
 function esV3() { return S.version >= 3; }
-function guardarDatos() { guardar(LS.datos, { version: S.version, config: S.config, gastos: S.gastos, ts: Date.now() }); }
+function esV4() { return S.version >= 4; }
+function guardarDatos() { guardar(LS.datos, { version: S.version, config: S.config, gastos: S.gastos, fichas: S.fichas, ts: Date.now() }); }
 
 /* Conexión con la hoja */
 function ErrorApi(codigo, msg) { this.codigo = codigo; this.message = msg; }
@@ -77,6 +80,9 @@ function pintarAviso() {
     if (S.version === 2) {
       html += '<div class="aviso"><span><strong>Tu hoja usa la versión anterior del script.</strong> Todo lo de antes funciona, pero el calendario de Google, los costos, los gastos y el resumen por correo necesitan actualizarlo.</span>' +
         '<button class="btn small" type="button" data-aviso="actualizar">Cómo actualizarlo</button></div>';
+    } else if (S.version === 3) {
+      html += '<div class="aviso"><span><strong>Hay una versión nueva del script.</strong> Trae las fichas de costo por producto, el precio de la luz y la lista de componentes. Lo de ahora sigue funcionando.</span>' +
+        '<button class="btn small" type="button" data-aviso="actualizar">Cómo actualizarlo</button></div>';
     }
   }
   av.innerHTML = html; av.hidden = !html;
@@ -101,7 +107,7 @@ function sincronizar(silencioso) {
   var antes = firmaListas();
   var p = api('sincronizar').then(function (r) {
     S.version = r.version || 3;
-    S.cache = r.pedidos || []; S.gastos = r.gastos || [];
+    S.cache = r.pedidos || []; S.gastos = r.gastos || []; S.fichas = r.fichas || [];
     S.config = Object.assign(clonar(CONFIG_BASE), r.config || {});
     S.sync.ultima = Date.now();
     guardar(LS.cache, S.cache); guardarDatos(); aplicarListas(); ponerConexion('ok');
@@ -120,7 +126,7 @@ function sincronizar(silencioso) {
   }).then(function () {
     S.sync.enCurso = null;
     if (firmaListas() !== antes) pintarListas();
-    prellenarEmpaque();
+    prellenarEmpaque(); pintarBloquesFichas();
     renderTodo();
   });
   S.sync.enCurso = p;
@@ -147,6 +153,12 @@ function upsertGasto(g) {
   if (!g || !g.id) return;
   var i = S.gastos.findIndex(function (x) { return x.id === g.id; });
   if (i >= 0) S.gastos[i] = g; else S.gastos.unshift(g);
+  guardarDatos();
+}
+function upsertFicha(f) {
+  if (!f || !f.id) return;
+  var i = S.fichas.findIndex(function (x) { return x.id === f.id; });
+  if (i >= 0) S.fichas[i] = f; else S.fichas.push(f);
   guardarDatos();
 }
 function todosLosPedidos() {

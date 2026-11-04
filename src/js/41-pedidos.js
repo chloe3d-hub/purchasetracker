@@ -7,6 +7,13 @@ function mostrarGuardado(p, info) {
   else sub = p.cliente + ' · ' + p.producto + ' · ' + dinero(p.total) + (p.debe > 0 ? ' · debe ' + dinero(p.debe) : ' · pagado');
   if (p.avisos && p.avisos.length) sub += ' ' + p.avisos[0];
   $('#ok-sub').textContent = sub;
+  S.fichaSugerida = info.ficha || null;
+  $('#ok-ficha').hidden = !S.fichaSugerida;
+  if (S.fichaSugerida) {
+    var s = S.fichaSugerida, d = [];
+    if (s.horas !== '') d.push(numTxt(s.horas) + ' h'); if (s.gramos !== '') d.push(numTxt(s.gramos) + ' g');
+    $('#ok-ficha-txt').textContent = '¿Guardar "' + s.nombre + '" como ficha? Así la próxima vez no tienes que escribir sus ' + d.join(' y ') + ' por unidad.';
+  }
   S.mensajeActual = mensajeCliente(p);
   $('#ok-mensaje').value = S.mensajeActual;
   abrir($('#dlg-ok'));
@@ -20,16 +27,17 @@ function onGuardar(ev) {
   var btn = $('#btn-guardar');
   btn.disabled = true; btn.textContent = 'Guardando…';
   var p = Object.assign({ ref: nuevoRef() }, d);
+  var sug = sugerirFicha(d, items);              // se calcula antes de limpiar el formulario
   api('crear', { pedido: p }).then(function (r) {
     upsertCache(r.pedido); ponerConexion('ok');
     limpiarFormulario(); renderTodo();
-    mostrarGuardado(r.pedido, { pendiente: false });
+    mostrarGuardado(r.pedido, { pendiente: false, ficha: sug });
   }, function (e) {
     if (e.codigo === 'SERVIDOR') { toast(e.message, 'error'); return; }
     S.pend.push(p); guardar(LS.pend, S.pend);
     ponerConexion(e.codigo === 'CONFIG' ? 'sinconfig' : 'error');
     limpiarFormulario(); renderTodo();
-    mostrarGuardado(p, { pendiente: true, motivo: e.message });
+    mostrarGuardado(p, { pendiente: true, motivo: e.message, ficha: sug });
   }).then(function () { btn.disabled = false; btn.textContent = 'Guardar pedido'; });
 }
 

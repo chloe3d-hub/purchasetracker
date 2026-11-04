@@ -39,8 +39,47 @@ function tarjetaProd(p) {
       '<div class="field"><label>Impresora<select data-prod="impresora"' + dis + '>' + opts + '</select></label></div>' +
       '<div class="field"><label>Horas<input data-prod="horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" value="' + (typeof p.horas === 'number' ? esc(numTxt(p.horas)) : '') + '"' + dis + '></label></div>' +
       '<div class="field"><label>Gramos<input data-prod="gramos" type="text" inputmode="decimal" placeholder="Ej: 120" value="' + (typeof p.gramos === 'number' ? esc(numTxt(p.gramos)) : '') + '"' + dis + '></label></div>' +
-    '</div>' +
+    '</div>' + htmlFichaProd(p) +
     '<div class="acciones">' + boton + '<button class="btn small ghost" type="button" data-accion="editar" data-id="' + esc(p.id) + '">Editar</button></div></article>';
+}
+/* Fichas dentro de la cola: llenar impresora, horas y gramos con un toque, y guardar lo nuevo como ficha */
+function unidadesDe(p) { return String(p.producto || '').indexOf(' + ') >= 0 ? 1 : Math.max(1, Number(p.cantidad) || 1); }
+function htmlFichaProd(p) {
+  if (!esV4()) return '';
+  var fs = S.fichas.slice().sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
+  var opts = '<option value="">' + (fs.length ? 'Usar una ficha…' : 'Aún no hay fichas') + '</option>' + fs.map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; }).join('');
+  var solo = String(p.producto || '').indexOf(' + ') < 0;
+  var puede = solo && (Number(p.horas) > 0 || Number(p.gramos) > 0) && !fichaPorNombre(p.producto);
+  return '<div class="prod-ficha"><select data-prod-ficha aria-label="Usar una ficha de producto"' + (fs.length ? '' : ' disabled') + '>' + opts + '</select>' +
+    (puede ? '<button class="btn small ghost" type="button" data-prod-ficha-guardar data-id="' + esc(p.id) + '">Guardar como ficha</button>' : '') + '</div>';
+}
+function usarFichaEnProduccion(id, fichaId, el) {
+  var p = buscarPedido(id), f = buscarFicha(fichaId); if (!p || !f) return;
+  var q = unidadesDe(p), cc = costoComponentes(f), cambios = {}, notas = [];
+  if (Number(f.horas) > 0) cambios.horas = redondear(f.horas * q, 2);
+  if (Number(f.gramos) > 0) cambios.gramos = redondear(f.gramos * q, 1);
+  if (f.impresora) cambios.impresora = f.impresora;
+  if (cc.total > 0) {
+    if (!(Number(p.otros) > 0)) cambios.otros = Math.round(cc.total * q);
+    else notas.push('No toqué "Otros costos" porque ya tenía ' + dinero(p.otros) + ' (los componentes de la ficha suman ' + dinero(cc.total * q) + ').');
+  }
+  cc.faltan.forEach(function (n) { notas.push('"' + n + '" ya no está en tu lista de componentes y no se sumó.'); });
+  if (!Object.keys(cambios).length) { toast('Esa ficha todavía no tiene horas, gramos ni componentes.', 'error'); el.value = ''; return; }
+  if (String(p.producto || '').indexOf(' + ') >= 0) notas.push('El pedido tiene varios productos: usé 1 unidad de la ficha. Ajusta los números si hace falta.');
+  el.disabled = true;
+  api('actualizar', { id: id, cambios: cambios }).then(function (r) {
+    upsertCache(r.pedido); toast(id + ': ficha "' + f.nombre + '" aplicada.' + (notas.length ? ' ' + notas.join(' ') : '')); renderTodo();
+  }, function (e) {
+    toast(scriptViejo(e) ? 'Tu hoja usa una versión anterior del script. Actualízalo para guardar esto.' : e.message, 'error'); el.value = ''; el.disabled = false;
+  });
+}
+function guardarFichaDePedido(id) {
+  var p = buscarPedido(id); if (!p) return;
+  var solo = String(p.producto || '').indexOf(' + ') < 0, cp = solo ? productoCatalogoPorNombre(p.producto) : null;
+  var base = baseFicha(solo ? p.producto : '', solo ? (categoriaDeProducto(p.producto) || (cp ? cp.categoria : '')) : '', p.impresora, Number(p.horas) || 0, Number(p.gramos) || 0, unidadesDe(p));
+  if (cp) base.catalogoId = cp.id;
+  if (!solo) base.nota = 'Este pedido tiene varios productos: pon el nombre del producto y revisa los números de una sola unidad.';
+  abrirFicha(base);
 }
 function renderProduccion() {
   pintarResumenProd();
@@ -97,10 +136,17 @@ function guardarProd(id, campo, valor, el) {
 function ligarProduccion() {
   var lista = $('#prod-lista');
   lista.addEventListener('change', function (ev) {
-    var el = ev.target, campo = el.dataset && el.dataset.prod; if (!campo) return;
+    var el = ev.target;
+    if (el.dataset && 'prodFicha' in el.dataset) {
+      var card = el.closest('[data-prod-id]'); if (card && el.value) usarFichaEnProduccion(card.dataset.prodId, el.value, el);
+      return;
+    }
+    var campo = el.dataset && el.dataset.prod; if (!campo) return;
     var art = el.closest('[data-prod-id]'); if (art) guardarProd(art.dataset.prodId, campo, el.value, el);
   });
   lista.addEventListener('click', function (ev) {
+    var g = ev.target.closest('[data-prod-ficha-guardar]');
+    if (g) { guardarFichaDePedido(g.dataset.id); return; }
     var b = ev.target.closest('[data-prod-estado]');
     if (b) { cambiarEstado(b.dataset.id, b.dataset.prodEstado); return; }
     onListaClick(ev);

@@ -90,6 +90,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-vis
 .items.multi .item{background:#0f0f10;border-radius:14px;padding:14px}
 .items.multi .item-head{display:flex}
 .opc{font-weight:500;opacity:.8}
+summary .opc{margin-left:.4em}
 .item-titulo{font-family:'Big Shoulders Stencil Display',Impact,'Arial Narrow',sans-serif;font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
 .btn.add{width:100%;background:var(--surface-2);color:var(--text)}
 .stepper{display:grid;grid-template-columns:48px 1fr 48px;gap:8px}
@@ -316,3 +317,29 @@ details .stack{padding-bottom:14px}
 #cel-qr .hint{text-align:center}
 #vista-ajustes .card:first-child{margin-top:14px}
 .fila-pegar{display:flex;gap:8px}.fila-pegar input{flex:1;min-width:0}
+
+/* Fichas de costo y componentes */
+.imp-calc{grid-column:1/-1;background:transparent;padding:0}
+.imp-calc > summary{min-height:40px;font-size:14px;color:var(--muted)}
+.imp-calc .field > label{font-size:13px;font-weight:700;color:var(--muted)}
+.imp-desglose:empty{display:none}
+.ficha-fila{display:grid;grid-template-columns:1fr 96px auto;gap:8px;align-items:center}
+.ficha-fila select{min-height:44px}
+.ff-cant-l{display:flex;align-items:center;gap:6px;font-weight:800;color:var(--muted)}
+.ff-cant-l input{min-height:44px;text-align:center;padding:8px}
+@media (max-width:420px){.ficha-fila{grid-template-columns:1fr 88px}.ficha-fila .btn{grid-column:1/-1;justify-self:start}}
+.ficha-item{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--surface-2);border-radius:14px;padding:12px 14px}
+.fi-txt{display:grid;gap:2px;min-width:0}
+.fi-txt b{overflow-wrap:anywhere}
+.fi-txt .hint b{color:var(--text)}
+.comp-fila{display:grid;grid-template-columns:1fr 130px 90px auto;gap:10px;align-items:end;background:var(--surface-2);border-radius:14px;padding:12px}
+.comp-fila .field > label{font-size:13px;font-weight:700;color:var(--muted)}
+.comp-fila input{background:var(--surface-3)}
+.comp-fila .cp-costo{grid-column:1/-1}
+.comp-fila .cp-costo:empty{display:none}
+@media (max-width:520px){.comp-fila{grid-template-columns:1fr 1fr auto}.comp-fila > .field:first-child{grid-column:1/-1}}
+.prod-ficha{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.prod-ficha select{width:auto;flex:1 1 180px;min-width:150px;min-height:40px;font-size:14px;font-weight:700;padding-right:36px}
+#f-notas{min-height:70px}
+.ok-ficha{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface-2);border-radius:14px;padding:12px 14px;margin-top:14px}
+.ok-ficha p{font-size:14px;flex:1 1 200px}

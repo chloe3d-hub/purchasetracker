@@ -48,6 +48,7 @@ function pintarListas() {
   $('#dl-transportadoras').innerHTML = S.listas.transportadoras.map(function (v) { return '<option value="' + esc(v) + '">'; }).join('');
   $('#dl-metodos').innerHTML = S.listas.metodos.map(function (v) { return '<option value="' + esc(v) + '">'; }).join('');
   pintarImpresoras('c-'); pintarImpresoras('ed-c-');
+  pintarDatalistFichas();
 }
 
 /* Campos de dinero con puntos de miles mientras se escribe */
@@ -254,6 +255,13 @@ function htmlCostos(p) {
     return '<div class="field"><label for="' + p + id + '">' + etiqueta + '</label><div class="money"><input id="' + p + id + '" type="text" inputmode="numeric" autocomplete="off"></div></div>';
   };
   return '<div class="stack">' +
+    '<div class="field" id="' + p + 'fichas-box" hidden>' +
+      '<span class="lbl">Rellenar con una ficha de producto</span>' +
+      '<div class="stack" id="' + p + 'fichas"></div>' +
+      '<div class="acciones"><button type="button" class="btn small" id="' + p + 'ficha-add">+ Usar una ficha</button>' +
+      '<button type="button" class="btn small ghost" id="' + p + 'ficha-guardar">Guardar estos números como ficha</button></div>' +
+      '<p class="hint" id="' + p + 'ficha-hint"></p>' +
+    '</div>' +
     '<div class="field"><label for="' + p + 'impresora">Impresora</label><select id="' + p + 'impresora"></select></div>' +
     '<div class="grid2">' +
       '<div class="field"><label for="' + p + 'horas">Horas de impresión</label><input id="' + p + 'horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" autocomplete="off"><p class="err" data-for="' + p + 'horas"></p></div>' +
@@ -267,10 +275,12 @@ function htmlCostos(p) {
 }
 function ligarCostos(p, totalFn) {
   var refrescar = function () { pintarResumenCostos(p, totalFn()); };
+  TOTAL_FN[p] = totalFn;
   ['empaque', 'envio', 'otros'].forEach(function (k) { ligarDinero($('#' + p + k), refrescar); });
   ['horas', 'gramos'].forEach(function (k) { $('#' + p + k).addEventListener('input', refrescar); });
   $('#' + p + 'impresora').addEventListener('change', refrescar);
   $('#' + p + 'empaque').addEventListener('input', function () { this.dataset.tocado = '1'; });
+  ligarFichasEnCostos(p);
 }
 function pintarImpresoras(p, actual) {
   var sel = $('#' + p + 'impresora'); if (!sel) return;
@@ -288,6 +298,7 @@ function leerCostos(p) {
 }
 function ponerCostos(p, o) {
   o = o || {};
+  reiniciarFichasEnCostos(p);                   // los valores que llegan son los definitivos: ninguna ficha los está llenando
   pintarImpresoras(p, o.impresora || '');
   $('#' + p + 'horas').value = o.horas === '' || o.horas == null ? '' : numTxt(o.horas);
   $('#' + p + 'gramos').value = o.gramos === '' || o.gramos == null ? '' : numTxt(o.gramos);

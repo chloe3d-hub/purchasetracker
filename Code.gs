@@ -1,5 +1,9 @@
 /*
-  Yi Shu Studio - Manager de la tienda (Google Apps Script) - versión 3
+  Yi Shu Studio - Manager de la tienda (Google Apps Script) - versión 4
+
+  Novedades de la versión 4: pestaña "Fichas" (horas, gramos y componentes de cada producto), precio de la luz,
+  datos de cada impresora para calcular su costo por hora y lista de componentes (luces, conectores, switches).
+  La pestaña "Fichas" se crea sola la primera vez que la app se conecta. Tus pedidos y gastos no se tocan.
 
   SI YA TIENES EL SCRIPT DE PEDIDOS FUNCIONANDO (el que ya está conectado a la app)
   No crees un proyecto nuevo: un proyecto nuevo tendría otra URL y habría que reconectar todo.
@@ -24,17 +28,20 @@
   "(GMT-05:00) Bogotá" para que las entregas del calendario caigan en el día correcto.
 */
 
-const VERSION = 3;
+const VERSION = 4;
 const CLAVE = 'CAMBIA-ESTA-CLAVE';
 const NOMBRE_HOJA = 'Pedidos';
 const NOMBRE_GASTOS = 'Gastos';
+const NOMBRE_FICHAS = 'Fichas';
 const NOMBRE_CONFIG = 'Config';
 const NOMBRE_CALENDARIO = 'Entregas Yi Shu';
 const NOMBRE_CARPETA_RESPALDO = 'Respaldos Yi Shu';
 const PREFIJO_RESPALDO = 'Respaldo Yi Shu ';
 const PREFIJO_ID = 'YS-';
 const PREFIJO_GASTO = 'G-';
+const PREFIJO_FICHA = 'F-';
 const RESPALDOS_A_CONSERVAR = 8;
+const MAX_FICHAS = 400;
 
 // ID de tu hoja de Google (la parte larga de su dirección, entre /d/ y /edit).
 // Pégalo entre las comillas. Déjalo vacío solo si el script lo creaste desde Extensiones > Apps Script dentro de la hoja.
@@ -96,6 +103,24 @@ const CAMPOS_GASTO = [
 const COLG = {};
 CAMPOS_GASTO.forEach(function (c, i) { COLG[c.k] = i + 1; });
 
+// Una ficha guarda lo que lleva UNA unidad de un producto: horas, gramos y componentes.
+// "Componentes (uso interno)" guarda la lista completa; "Componentes" es solo para leerla en la hoja.
+const CAMPOS_FICHA = [
+  { k: 'id',             h: 'ID' },
+  { k: 'nombre',         h: 'Producto' },
+  { k: 'categoria',      h: 'Categoría' },
+  { k: 'impresora',      h: 'Impresora' },
+  { k: 'horas',          h: 'Horas por unidad' },
+  { k: 'gramos',         h: 'Gramos por unidad' },
+  { k: 'componentesTxt', h: 'Componentes' },
+  { k: 'notas',          h: 'Notas' },
+  { k: 'catalogoId',     h: 'ID en el catálogo' },
+  { k: 'actualizado',    h: 'Actualizado' },
+  { k: 'componentes',    h: 'Componentes (uso interno)' }
+];
+const COLF = {};
+CAMPOS_FICHA.forEach(function (c, i) { COLF[c.k] = i + 1; });
+
 // Ajustes compartidos (los guarda la pestaña "Config"). Los costos arrancan en 0 a propósito:
 // los llena Lorena en la app, aquí no se inventa ningún precio.
 const CONFIG_BASE = {
@@ -104,17 +129,19 @@ const CONFIG_BASE = {
     { nombre: 'Bambu Lab P1S', costoHora: 0 }
   ],
   costoGramo: 0,
+  luzKwh: 0,
   empaque: 0,
+  componentes: [],
   listas: {},
   gastoCategorias: ['Filamento', 'Empaques', 'Envíos', 'Publicidad', 'Repuestos y mantenimiento',
-    'Electricidad', 'Equipos y herramientas', 'Otros'],
+    'Electricidad', 'Equipos y herramientas', 'Componentes electrónicos', 'Otros'],
   calendario: false,
   resumen: false,
   resumenHora: 7,
   resumenEmail: '',
   respaldo: false
 };
-const CONFIG_EDITABLE = ['impresoras', 'costoGramo', 'empaque', 'listas', 'gastoCategorias'];
+const CONFIG_EDITABLE = ['impresoras', 'costoGramo', 'luzKwh', 'empaque', 'componentes', 'listas', 'gastoCategorias'];
 
 /* Puntos de entrada */
 
@@ -162,7 +189,7 @@ function despachar_(req) {
       sh = hoja_();
       return {
         ok: true, version: VERSION, ahora: iso_(ahora_(), zona_(sh), true), zona: zona_(sh),
-        pedidos: leerPedidos_(sh), gastos: leerGastos_(gastosHoja_()), config: leerConfig_()
+        pedidos: leerPedidos_(sh), gastos: leerGastos_(gastosHoja_()), fichas: leerFichas_(fichasHoja_()), config: leerConfig_()
       };
     case 'listar':
       return { ok: true, pedidos: leerPedidos_(hoja_()) };
@@ -182,6 +209,10 @@ function despachar_(req) {
       return { ok: true, gasto: actualizarGasto_(gastosHoja_(), req) };
     case 'gasto_eliminar':
       return eliminarGasto_(gastosHoja_(), req);
+    case 'ficha_guardar':
+      return { ok: true, ficha: guardarFicha_(fichasHoja_(), req.ficha || {}) };
+    case 'ficha_eliminar':
+      return eliminarFicha_(fichasHoja_(), req);
     case 'automatizaciones_estado':
       return { ok: true, estado: estadoAutomatizaciones_(leerConfig_()) };
     case 'automatizaciones_activar':
@@ -207,9 +238,10 @@ function despachar_(req) {
 function configurarHoja() {
   var sh = hoja_();
   gastosHoja_();
+  fichasHoja_();
   configHoja_();
   SpreadsheetApp.flush();
-  Logger.log('Pestañas "' + sh.getName() + '", "' + NOMBRE_GASTOS + '" y "' + NOMBRE_CONFIG + '" listas.');
+  Logger.log('Pestañas "' + sh.getName() + '", "' + NOMBRE_GASTOS + '", "' + NOMBRE_FICHAS + '" y "' + NOMBRE_CONFIG + '" listas.');
 }
 
 // Toca todos los servicios que usa el manager para que Google pida los permisos de una vez.
@@ -513,13 +545,53 @@ function validarConfig_(k, v) {
       vistos[nombre.toLowerCase()] = true;
       var costo = decimal_(p.costoHora, 2);
       if (costo < 0 || costo > 1000000) throw new Error('El costo por hora de "' + nombre + '" no es válido.');
-      return { nombre: nombre, costoHora: costo };
+      var imp = { nombre: nombre, costoHora: costo };
+      // Datos con los que se calculó el costo por hora (opcionales; solo se guardan los que tienen valor).
+      var datosImp = [['precio', 'el precio', 1000000000], ['vidaHoras', 'la vida útil', 1000000],
+        ['vatios', 'los vatios', 10000], ['mantenimientoHora', 'el mantenimiento por hora', 1000000]];
+      datosImp.forEach(function (d) {
+        var x = p[d[0]];
+        if (x === '' || x === null || x === undefined) return;
+        x = decimal_(x, 2);
+        if (x < 0 || x > d[2]) throw new Error('En "' + nombre + '", ' + d[1] + ' no es válido.');
+        if (x > 0) imp[d[0]] = x;
+      });
+      return imp;
     });
   }
   if (k === 'costoGramo') {
     var g = decimal_(v, 2);
     if (g < 0 || g > 1000000) throw new Error('El costo por gramo no es válido.');
     return g;
+  }
+  if (k === 'luzKwh') {
+    var kwh = decimal_(v, 2);
+    if (kwh < 0 || kwh > 1000000) throw new Error('El precio de la luz por kWh no es válido.');
+    return kwh;
+  }
+  if (k === 'componentes') {
+    if (!Array.isArray(v) || v.length > 60) throw new Error('La lista de componentes no es válida (máximo 60).');
+    var nombres = {};
+    return v.map(function (c) {
+      var nom = texto_(c && c.nombre, 60);
+      if (!nom) throw new Error('Cada componente necesita un nombre.');
+      if (nombres[nom.toLowerCase()]) throw new Error('El componente "' + nom + '" está repetido.');
+      nombres[nom.toLowerCase()] = true;
+      var comp = { nombre: nom };
+      var precio = decimal_(c.precio, 2), unidades = decimal_(c.unidades, 2);
+      if (precio < 0 || precio > 1000000000) throw new Error('El precio de "' + nom + '" no es válido.');
+      if (unidades < 0 || unidades > 100000) throw new Error('Las unidades de "' + nom + '" no son válidas.');
+      if (precio > 0) {
+        // Con el precio del paquete y cuántas unidades trae, el costo de una unidad se calcula aquí.
+        comp.precio = precio;
+        comp.unidades = unidades > 0 ? unidades : 1;
+        comp.costo = decimal_(precio / comp.unidades, 2);
+      } else {
+        comp.costo = decimal_(c.costo, 2);
+        if (comp.costo < 0 || comp.costo > 1000000000) throw new Error('El costo de "' + nom + '" no es válido.');
+      }
+      return comp;
+    });
   }
   if (k === 'empaque') {
     var e = Math.round(numero_(v));
@@ -919,6 +991,151 @@ function eliminarGasto_(sh, req) {
   sh.deleteRow(fila);
   SpreadsheetApp.flush();
   return { ok: true, id: String(req.id) };
+}
+
+/* Fichas de costo */
+
+function fichasHoja_() {
+  var ss = libro_();
+  var sh = ss.getSheetByName(NOMBRE_FICHAS);
+  if (!sh) sh = ss.insertSheet(NOMBRE_FICHAS);
+  if (sh.getLastRow() === 0) {
+    var n = CAMPOS_FICHA.length;
+    asegurarColumnas_(sh, n);
+    estiloEncabezado_(sh.getRange(1, 1, 1, n).setValues([CAMPOS_FICHA.map(function (c) { return c.h; })]));
+    sh.setFrozenRows(1);
+    sh.setRowHeight(1, 40);
+    var filas = Math.max(sh.getMaxRows() - 1, 1);
+    sh.getRange(2, COLF.horas, filas, 1).setNumberFormat('0.0#');
+    sh.getRange(2, COLF.gramos, filas, 1).setNumberFormat('#,##0.#');
+    sh.getRange(2, COLF.actualizado, filas, 1).setNumberFormat('dd/mm/yyyy hh:mm');
+    var anchos = { id: 80, nombre: 240, categoria: 160, impresora: 150, horas: 110, gramos: 110, componentesTxt: 260, notas: 240, catalogoId: 110, actualizado: 140 };
+    Object.keys(anchos).forEach(function (k) { sh.setColumnWidth(COLF[k], anchos[k]); });
+    sh.hideColumns(COLF.componentes);
+  } else {
+    var enc = sh.getRange(1, 1, 1, Math.min(CAMPOS_FICHA.length, sh.getMaxColumns())).getValues()[0];
+    if (enc[0] !== CAMPOS_FICHA[0].h || enc[COLF.componentes - 1] !== CAMPOS_FICHA[COLF.componentes - 1].h) {
+      throw new Error('La pestaña "' + NOMBRE_FICHAS + '" ya existe con otras columnas. Renómbrala para que el manager pueda crear la suya.');
+    }
+  }
+  return sh;
+}
+
+function fichaAObjeto_(vals, fila) {
+  var o = { fila: fila };
+  CAMPOS_FICHA.forEach(function (c, i) {
+    var v = vals[i];
+    if (c.k === 'componentesTxt' || c.k === 'actualizado') return;
+    if (c.k === 'componentes') {
+      var lista = [];
+      try {
+        var j = JSON.parse(String(v || '[]'));
+        if (Array.isArray(j)) lista = j;
+      } catch (e) { /* celda dañada: queda sin componentes */ }
+      o.componentes = lista.filter(function (x) { return x && x.nombre; }).map(function (x) {
+        return { nombre: String(x.nombre), cantidad: numero_dec_(x.cantidad) > 0 ? numero_dec_(x.cantidad) : 1 };
+      });
+    } else if (c.k === 'horas' || c.k === 'gramos') {
+      o[c.k] = (v === '' || v === null || v === undefined || isNaN(Number(v))) ? '' : Number(v);
+    } else if (c.k === 'catalogoId') {
+      var id = numero_(v);
+      o.catalogoId = id > 0 ? id : '';
+    } else {
+      o[c.k] = (v === null || v === undefined) ? '' : String(v);
+    }
+  });
+  return o;
+}
+
+function leerFichas_(sh) {
+  var n = sh.getLastRow() - 1;
+  if (n < 1) return [];
+  var datos = sh.getRange(2, 1, n, CAMPOS_FICHA.length).getValues();
+  var salida = [];
+  for (var i = 0; i < datos.length; i++) {
+    if (datos[i][0] !== '' && datos[i][0] !== null) salida.push(fichaAObjeto_(datos[i], i + 2));
+  }
+  return salida;
+}
+
+function validarFicha_(f) {
+  var out = {};
+  out.nombre = texto_(f.nombre, 80);
+  if (!out.nombre) throw new Error('La ficha necesita el nombre del producto.');
+  out.categoria = texto_(f.categoria, 60);
+  out.impresora = texto_(f.impresora, 60);
+  out.horas = (f.horas === '' || f.horas === null || f.horas === undefined) ? '' : decimal_(f.horas, 2);
+  if (out.horas !== '' && (out.horas < 0 || out.horas > 1000)) throw new Error('Las horas de la ficha deben estar entre 0 y 1000.');
+  out.gramos = (f.gramos === '' || f.gramos === null || f.gramos === undefined) ? '' : decimal_(f.gramos, 1);
+  if (out.gramos !== '' && (out.gramos < 0 || out.gramos > 100000)) throw new Error('Los gramos de la ficha deben estar entre 0 y 100.000.');
+  var comps = Array.isArray(f.componentes) ? f.componentes : [];
+  if (comps.length > 20) throw new Error('Una ficha puede tener máximo 20 componentes distintos.');
+  var vistos = {};
+  out.componentes = comps.map(function (c) {
+    var nom = texto_(c && c.nombre, 60);
+    if (!nom) throw new Error('Cada componente de la ficha necesita un nombre.');
+    if (vistos[nom.toLowerCase()]) throw new Error('El componente "' + nom + '" está repetido en la ficha.');
+    vistos[nom.toLowerCase()] = true;
+    var cant = decimal_(c.cantidad, 2);
+    if (!(cant > 0) || cant > 1000) throw new Error('La cantidad de "' + nom + '" debe ser mayor que cero.');
+    return { nombre: nom, cantidad: cant };
+  });
+  out.notas = texto_(f.notas, 300);
+  var cid = numero_(f.catalogoId);
+  out.catalogoId = cid > 0 ? cid : '';
+  return out;
+}
+
+// Crea la ficha, o la actualiza si trae su ID. No puede haber dos fichas con el mismo nombre.
+function guardarFicha_(sh, req) {
+  var datos = validarFicha_(req);
+  var id = texto_(req.id, 20);
+  var ultima = sh.getLastRow();
+  var existentes = ultima > 1 ? sh.getRange(2, 1, ultima - 1, CAMPOS_FICHA.length).getValues() : [];
+  var fila = 0, max = 0, total = 0;
+  existentes.forEach(function (r, i) {
+    if (r[0] === '' || r[0] === null) return;
+    total++;
+    var m = String(r[0]).match(/(\d+)$/);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+    if (id && String(r[0]) === id) fila = i + 2;
+  });
+  if (id && !fila) throw new Error('No encontré la ficha ' + id + ' en la hoja.');
+  existentes.forEach(function (r) {
+    if (r[0] === '' || r[0] === null || String(r[0]) === id) return;
+    if (String(r[COLF.nombre - 1]).toLowerCase() === datos.nombre.toLowerCase()) {
+      throw new Error('Ya existe una ficha llamada "' + datos.nombre + '". Ábrela y edítala en vez de crear otra.');
+    }
+  });
+  if (!fila) {
+    if (total >= MAX_FICHAS) throw new Error('Llegaste al máximo de ' + MAX_FICHAS + ' fichas.');
+    fila = ultima + 1;
+    if (fila > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 100);
+    id = PREFIJO_FICHA + ('0000' + (max + 1)).slice(-4);
+  }
+  var valores = CAMPOS_FICHA.map(function () { return ''; });
+  var poner = function (k, v) { valores[COLF[k] - 1] = v; };
+  poner('id', id);
+  ['nombre', 'categoria', 'impresora', 'horas', 'gramos', 'notas', 'catalogoId'].forEach(function (k) { poner(k, datos[k]); });
+  poner('componentesTxt', datos.componentes.map(function (c) { return c.nombre + ' x' + c.cantidad; }).join(', '));
+  poner('componentes', JSON.stringify(datos.componentes));
+  poner('actualizado', ahora_());
+  sh.getRange(fila, 1, 1, CAMPOS_FICHA.length).setValues([valores]);
+  SpreadsheetApp.flush();
+  return fichaAObjeto_(sh.getRange(fila, 1, 1, CAMPOS_FICHA.length).getValues()[0], fila);
+}
+
+function eliminarFicha_(sh, req) {
+  var n = Math.max(sh.getLastRow() - 1, 1);
+  var ids = sh.getRange(2, COLF.id, n, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === String(req.id)) {
+      sh.deleteRow(i + 2);
+      SpreadsheetApp.flush();
+      return { ok: true, id: String(req.id) };
+    }
+  }
+  throw new Error('No encontré la ficha ' + req.id + ' en la hoja.');
 }
 
 /* Google Calendar */

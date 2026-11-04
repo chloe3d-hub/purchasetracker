@@ -322,7 +322,7 @@ __CSS__
               <li>Elige la función autorizarPermisos, toca Ejecutar y acepta los permisos nuevos (calendario, correo y Drive).</li>
               <li>Implementar &gt; Administrar implementaciones &gt; el lápiz &gt; Versión: Nueva versión &gt; Implementar. La URL no cambia.</li>
               <li>En Configuración del proyecto (la rueda dentada) deja la zona horaria en Bogotá.</li>
-              <li>Vuelve aquí, toca Probar conexión y debe decir versión 3.</li>
+              <li>Vuelve aquí, toca Probar conexión y debe decir versión 4.</li>
             </ol>
           </div>
         </details>
@@ -369,6 +369,11 @@ __CSS__
           </div>
         </div>
         <div class="field">
+          <label for="cos-luz">Precio de la luz por kWh</label>
+          <div class="money"><input id="cos-luz" type="text" inputmode="decimal" autocomplete="off" placeholder="Ej: 875,05"></div>
+          <p class="hint">Está en tu recibo ("Valor kWh aplicado"). Se usa en la calculadora del costo por hora de cada impresora.</p>
+        </div>
+        <div class="field">
           <span class="lbl">Impresoras y su costo por hora</span>
           <p class="hint">El costo por hora puede incluir la luz y el desgaste. Los nombres que pongas aquí salen para elegir en cada pedido.</p>
           <div id="cos-imp" class="stack"></div>
@@ -379,6 +384,33 @@ __CSS__
           <button class="btn small ghost" id="cos-recalcular" type="button">Recalcular pedidos anteriores</button>
         </div>
         <p class="hint">Cada pedido guarda su costo con los precios del momento. Si cambias los precios, el botón de recalcular actualiza los pedidos que ya tienen horas o gramos anotados.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Componentes</h2>
+      <div class="aviso" id="aj-comp-v3" hidden><span><strong>Esto necesita el script nuevo (versión 4).</strong> Mira "Cómo instalar o actualizar el script" arriba.</span></div>
+      <div class="stack" id="aj-comp-ok">
+        <p class="hint">Luces LED, conectores, switches y todo lo que se le agrega a una pieza. Anota lo que pagaste por el paquete y cuántas unidades trae: la app calcula lo que cuesta una. Luego los eliges en la ficha de cada producto.</p>
+        <div id="comp-lista" class="stack"></div>
+        <button class="btn small" id="comp-agregar" type="button">+ Agregar componente</button>
+        <div class="acciones"><button class="btn primary" id="comp-guardar" type="button">Guardar componentes</button></div>
+        <p class="hint">El cautín, otra placa o plato de impresión y las herramientas no van aquí: son gastos del negocio. Anótalos en Números > Gastos (por ejemplo en "Equipos y herramientas" o "Repuestos y mantenimiento"). Para las compras de componentes, agrega la categoría "Componentes electrónicos" en Mis listas.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Fichas de costo</h2>
+      <div class="aviso" id="aj-fichas-v3" hidden><span><strong>Esto necesita el script nuevo (versión 4).</strong> Mira "Cómo instalar o actualizar el script" arriba.</span></div>
+      <div class="stack" id="aj-fichas-ok">
+        <p class="hint">Una ficha guarda lo que lleva UNA unidad de un producto: horas, gramos, impresora y componentes. En cada pedido eliges la ficha y los costos se llenan solos. Los precios (filamento, impresora, componentes) se toman de Ajustes, así que si cambian, el costo de la ficha se actualiza solo. Los pedidos ya guardados conservan el costo que tenían.</p>
+        <div class="acciones">
+          <button class="btn small primary" id="ficha-nueva" type="button">+ Nueva ficha</button>
+          <input id="fichas-buscar" type="text" placeholder="Buscar producto" autocomplete="off" aria-label="Buscar una ficha o un producto del catálogo" style="flex:1 1 160px;width:auto">
+        </div>
+        <div id="fichas-lista" class="stack"></div>
+        <details id="fichas-hist-det"><summary>Sugerencias de tus pedidos anteriores <span id="fichas-hist-n" class="opc"></span></summary><div class="stack" id="fichas-hist"></div></details>
+        <details id="fichas-sin-det"><summary>Productos del catálogo sin ficha <span id="fichas-sin-n" class="opc"></span></summary><div class="stack" id="fichas-sin"></div></details>
       </div>
     </div>
 
@@ -453,6 +485,8 @@ __CSS__
 <datalist id="dl-canales"></datalist>
 <datalist id="dl-transportadoras"></datalist>
 <datalist id="dl-metodos"></datalist>
+<datalist id="dl-catalogo"></datalist>
+<datalist id="dl-cat-prod"></datalist>
 
 <!-- Diálogo: pedido guardado -->
 <dialog id="dlg-ok" aria-labelledby="ok-titulo">
@@ -461,6 +495,10 @@ __CSS__
   <div class="field">
     <label for="ok-mensaje">Mensaje para el cliente (lo puedes editar antes de copiarlo)</label>
     <textarea id="ok-mensaje"></textarea>
+  </div>
+  <div class="ok-ficha" id="ok-ficha" hidden>
+    <p id="ok-ficha-txt"></p>
+    <button class="btn small" id="ok-ficha-btn" type="button">Guardar ficha</button>
   </div>
   <div class="acciones-dlg">
     <button class="btn primary" id="ok-copiar" type="button">Copiar mensaje</button>
@@ -578,6 +616,42 @@ __CSS__
       <button class="btn primary" id="g-ok" type="submit">Guardar</button>
       <button class="btn ghost" id="g-cancelar" type="button">Cancelar</button>
       <button class="btn ghost peligro" id="g-eliminar" type="button" hidden>Borrar gasto</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Diálogo: ficha de costo -->
+<dialog id="dlg-ficha" aria-labelledby="ficha-titulo">
+  <h2 id="ficha-titulo">Nueva ficha</h2>
+  <p class="sub" id="ficha-sub"></p>
+  <form id="form-ficha" novalidate class="stack">
+    <div class="field">
+      <label for="f-nombre">Producto <span class="req">*</span></label>
+      <input id="f-nombre" type="text" list="dl-catalogo" maxlength="80" autocomplete="off" placeholder="Escribe o elige uno del catálogo">
+      <p class="hint" id="f-catalogo-info"></p>
+    </div>
+    <div class="grid2 collapse">
+      <div class="field"><label for="f-categoria">Categoría</label><input id="f-categoria" type="text" list="dl-cat-prod" maxlength="60" autocomplete="off"></div>
+      <div class="field"><label for="f-impresora">Impresora</label><select id="f-impresora"></select></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="f-horas">Horas por unidad</label><input id="f-horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" autocomplete="off"></div>
+      <div class="field"><label for="f-gramos">Gramos por unidad</label><input id="f-gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>
+    </div>
+    <div class="field">
+      <span class="lbl">Componentes que lleva cada unidad</span>
+      <div id="f-comps" class="stack"></div>
+      <div class="acciones"><button type="button" class="btn small" id="f-comp-add">+ Agregar componente</button></div>
+      <p class="hint" id="f-comp-hint"></p>
+    </div>
+    <div class="field"><label for="f-notas">Notas</label><textarea id="f-notas" rows="2" maxlength="300"></textarea></div>
+    <div class="saldo" id="f-resumen" data-estado="vacio" aria-live="polite"><span class="t">Costo de una unidad</span><span class="v">&mdash;</span></div>
+    <p class="hint" id="f-resumen-det"></p>
+    <p class="err" id="f-err"></p>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="f-ok" type="submit">Guardar ficha</button>
+      <button class="btn ghost" id="f-cancelar" type="button">Cancelar</button>
+      <button class="btn ghost peligro" id="f-eliminar" type="button" hidden>Borrar ficha</button>
     </div>
   </form>
 </dialog>
