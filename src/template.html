@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Yi Shu">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Yi Shu Manager</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="data:image/png;base64,__LOGO96__">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Stencil+Display:wght@700;800;900&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+__CSS__
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <img src="data:image/png;base64,__LOGO192__" alt="Logo de Yi Shu Studio" width="46" height="46">
+      <div>
+        <p class="brand-sub">Yi Shu Studio</p>
+        <h1>Manager</h1>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span id="conexion" class="status" data-estado="sinconfig" role="status"><i class="dot"></i><span id="conexion-txt">Sin conectar</span></span>
+      <button id="btn-config" class="icon-btn" type="button" aria-label="Ajustes" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="aviso" class="avisos" hidden></div>
+
+  <!-- NUEVO PEDIDO -->
+  <section id="vista-nuevo" aria-label="Nuevo pedido">
+    <form id="form" novalidate autocomplete="off">
+
+      <div class="card">
+        <h2>Cliente</h2>
+        <div class="stack">
+          <div class="grid2 collapse">
+            <div class="field">
+              <label for="cliente">Nombre del cliente <span class="req">*</span></label>
+              <input id="cliente" name="cliente" type="text" autocomplete="off" autocapitalize="words">
+              <p class="err" data-for="cliente"></p>
+            </div>
+            <div class="field">
+              <label for="fecha">Fecha del pedido</label>
+              <div class="fecha-wrap">
+                <input id="fecha" name="fecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" data-fecha>
+                <button type="button" class="cal-btn" data-cal="fecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+                <input type="date" class="cal-sel" id="fecha-sel" tabindex="-1" aria-hidden="true">
+              </div>
+              <p class="err" data-for="fecha"></p>
+            </div>
+          </div>
+          <div class="field">
+            <label for="contacto">WhatsApp o teléfono</label>
+            <input id="contacto" name="contacto" type="tel" inputmode="tel" autocomplete="off">
+          </div>
+          <div class="field" role="group" aria-labelledby="lbl-canal">
+            <span class="lbl" id="lbl-canal">¿Por dónde nos contactó? <span class="req">*</span></span>
+            <div class="chips" id="chips-canal"></div>
+            <input id="canal-otro" type="text" placeholder="¿Cuál?" hidden>
+            <p class="err" data-for="canal"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Pedido</h2>
+        <div class="stack">
+          <div id="items" class="items stack"></div>
+          <div class="field">
+            <button type="button" class="btn add" id="btn-agregar-item">+ Agregar otro producto</button>
+            <p class="err" data-for="items"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Pago</h2>
+        <div class="stack">
+          <div class="grid2">
+            <div class="field">
+              <label for="total">Valor total <span class="req">*</span></label>
+              <div class="money"><input id="total" name="total" type="text" inputmode="numeric" autocomplete="off"></div>
+              <p class="err" data-for="total"></p>
+            </div>
+            <div class="field">
+              <label for="pago">Lo que ya pagó</label>
+              <div class="money"><input id="pago" name="pago" type="text" inputmode="numeric" autocomplete="off"></div>
+              <p class="err" data-for="pago"></p>
+            </div>
+          </div>
+          <div class="quick" aria-label="Atajos de pago">
+            <button type="button" id="pago-todo">Pagó todo</button>
+            <button type="button" id="pago-mitad">Pagó la mitad</button>
+            <button type="button" id="pago-nada">Aún no pagó</button>
+          </div>
+          <div class="saldo" id="saldo" data-estado="vacio" aria-live="polite">
+            <span class="t" id="saldo-t">Saldo pendiente</span>
+            <span class="v" id="saldo-v">&mdash;</span>
+          </div>
+          <div class="field" role="group" aria-labelledby="lbl-metodo" id="grupo-metodo">
+            <span class="lbl" id="lbl-metodo">¿Cómo pagó?</span>
+            <div class="chips" id="chips-metodo"></div>
+            <input id="metodo-otro" type="text" placeholder="¿Cuál?" hidden>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Entrega</h2>
+        <div class="stack">
+          <div class="field">
+            <label for="entregaFecha">Fecha de entrega <span class="req">*</span></label>
+            <div class="fecha-wrap">
+              <input id="entregaFecha" name="entregaFecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off" data-fecha>
+              <button type="button" class="cal-btn" data-cal="entregaFecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+              <input type="date" class="cal-sel" id="entregaFecha-sel" tabindex="-1" aria-hidden="true">
+            </div>
+            <div class="quick" aria-label="Atajos de fecha">
+              <button type="button" data-dias="3">En 3 días</button>
+              <button type="button" data-dias="7">En 1 semana</button>
+              <button type="button" data-dias="14">En 2 semanas</button>
+              <button type="button" data-dias="21">En 3 semanas</button>
+            </div>
+            <p class="err" data-for="entregaFecha"></p>
+          </div>
+          <div class="field" role="group" aria-labelledby="lbl-tipo">
+            <span class="lbl" id="lbl-tipo">¿Envío o recogida? <span class="req">*</span></span>
+            <div class="chips">
+              <label class="chip"><input type="radio" name="entregaTipo" value="Envío"><span>Envío</span></label>
+              <label class="chip"><input type="radio" name="entregaTipo" value="Recogida"><span>Lo recogen</span></label>
+            </div>
+            <p class="err" data-for="entregaTipo"></p>
+          </div>
+          <div id="bloque-envio" class="stack" hidden>
+            <div class="field">
+              <label for="transportadora">¿Por dónde se envía? <span class="req">*</span></label>
+              <select id="transportadora" name="transportadora"></select>
+              <input id="transportadora-otro" type="text" placeholder="¿Cuál?" hidden>
+              <p class="err" data-for="transportadora"></p>
+            </div>
+            <div class="field">
+              <label for="direccion">Dirección y ciudad</label>
+              <textarea id="direccion" name="direccion" rows="2"></textarea>
+              <p class="hint">Si todavía no la tienes, déjala vacía y complétala después editando el pedido.</p>
+            </div>
+          </div>
+          <div id="bloque-recogida" class="field" hidden>
+            <label for="puntoRecogida">¿Dónde lo recogen?</label>
+            <input id="puntoRecogida" name="puntoRecogida" type="text" placeholder="Ej: feria, punto de encuentro, en casa">
+          </div>
+        </div>
+      </div>
+
+      <details class="card-det" id="bloque-costos-nuevo" hidden>
+        <summary>Costos de impresión <span class="opc">(opcional)</span></summary>
+        <div id="costos-nuevo-cont"></div>
+      </details>
+
+      <div class="card">
+        <h2>Extras</h2>
+        <div class="stack">
+          <div class="field">
+            <label for="estado">Estado del pedido</label>
+            <select id="estado" name="estado"></select>
+          </div>
+          <div class="field">
+            <label for="notas">Notas</label>
+            <textarea id="notas" name="notas" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar">
+        <button type="button" class="btn ghost" id="btn-limpiar">Limpiar</button>
+        <button type="submit" class="btn primary" id="btn-guardar">Guardar pedido</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- PEDIDOS -->
+  <section id="vista-pedidos" aria-label="Pedidos" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="tools">
+      <div class="row">
+        <input id="buscar" class="buscar" type="text" inputmode="search" placeholder="Buscar por nombre, producto o ID" aria-label="Buscar pedidos">
+        <button class="icon-btn" id="btn-refrescar" type="button" aria-label="Actualizar lista">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+      </div>
+      <div class="row mes-row">
+        <label for="filtro-mes" class="lbl">Mes del pedido</label>
+        <select id="filtro-mes" aria-label="Filtrar por mes en que se hizo el pedido"><option value="">Todos los meses</option></select>
+      </div>
+      <div class="filtros" id="filtros" role="radiogroup" aria-label="Filtrar pedidos"></div>
+    </div>
+    <div class="lista" id="lista" aria-live="polite"></div>
+  </section>
+
+  <!-- CALENDARIO -->
+  <section id="vista-calendario" aria-label="Calendario de entregas" hidden>
+    <div class="card cal-card">
+      <div class="cal-cab">
+        <button class="icon-btn" id="cal-ant" type="button" aria-label="Mes anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="cal-tit"><h2 id="cal-titulo">Mes</h2><button class="btn small ghost" id="cal-hoy" type="button">Hoy</button></div>
+        <button class="icon-btn" id="cal-sig" type="button" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+      <p class="hint" id="cal-resumen"></p>
+      <div class="cal-sem" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="leyenda cal-ley"><span><i class="pill-k norm"></i>Entrega pendiente</span><span><i class="pill-k hoy"></i>Es hoy</span><span><i class="pill-k tarde"></i>Vencida</span><span><i class="pill-k hecho"></i>Ya entregada</span></div>
+    </div>
+    <h3 class="grupo" id="cal-dia-titulo"></h3>
+    <div class="lista" id="cal-lista"></div>
+    <div id="cal-notas"></div>
+  </section>
+
+  <!-- PRODUCCIÓN -->
+  <section id="vista-produccion" aria-label="Cola de producción" hidden>
+    <div class="stats" id="prod-stats"></div>
+    <div class="aviso" id="prod-v2" hidden><span><strong>Falta actualizar el script de tu hoja.</strong> Puedes ver la cola, pero para asignar impresora, horas y gramos hay que instalar la versión nueva (Ajustes).</span></div>
+    <div class="filtros" id="prod-imp" role="radiogroup" aria-label="Filtrar por impresora"></div>
+    <div class="lista" id="prod-lista"></div>
+  </section>
+
+  <!-- NÚMEROS -->
+  <section id="vista-numeros" aria-label="Números del negocio" hidden>
+    <div class="seg" id="num-tabs" role="tablist" aria-label="Qué quieres ver">
+      <button type="button" role="tab" data-tab="ventas" aria-selected="true">Ventas</button>
+      <button type="button" role="tab" data-tab="gastos" aria-selected="false">Gastos</button>
+    </div>
+    <div id="num-ventas">
+      <div class="tools">
+        <div class="row mes-row">
+          <label for="panel-periodo" class="lbl">Periodo</label>
+          <select id="panel-periodo"></select>
+          <button class="btn small" id="panel-tabla" type="button" aria-pressed="false">Ver como tabla</button>
+        </div>
+      </div>
+      <div id="panel-cuerpo"></div>
+    </div>
+    <div id="num-gastos" hidden>
+      <div class="aviso" id="gas-v2" hidden><span><strong>Los gastos necesitan el script nuevo.</strong> Actualízalo desde Ajustes y aquí podrás anotar filamento, empaques, publicidad y más.</span></div>
+      <div id="gas-contenido">
+        <div class="tools">
+          <div class="row mes-row">
+            <label for="gas-mes" class="lbl">Mes</label>
+            <select id="gas-mes"></select>
+            <button class="btn small primary" id="btn-gasto-nuevo" type="button">Nuevo gasto</button>
+          </div>
+        </div>
+        <div id="gas-total" class="kpis"></div>
+        <div id="gas-cats"></div>
+        <div class="lista" id="gas-lista"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="vista-ajustes" aria-label="Ajustes" hidden>
+
+    <div class="card">
+      <h2>Conexión con la hoja</h2>
+      <div class="stack">
+        <p class="hint" id="aj-version"></p>
+        <div class="field">
+          <label for="cfg-url">URL de la aplicación web (termina en /exec)</label>
+          <input id="cfg-url" type="url" inputmode="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cfg-clave">Clave</label>
+          <input id="cfg-clave" type="password" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="cfg-hoja-url">Enlace de tu hoja de Google (opcional, para el botón "Abrir la hoja")</label>
+          <input id="cfg-hoja-url" type="url" inputmode="url" placeholder="https://docs.google.com/spreadsheets/d/..." autocomplete="off">
+        </div>
+        <div class="acciones">
+          <button class="btn small" id="cfg-probar" type="button">Probar conexión</button>
+          <button class="btn small primary" id="cfg-guardar" type="button">Guardar conexión</button>
+          <a class="btn small ghost enlace-btn" id="cfg-hoja" href="#" target="_blank" rel="noopener" hidden>Abrir la hoja</a>
+        </div>
+        <p class="prueba" id="cfg-prueba" role="status"></p>
+        <div class="field">
+          <label for="cfg-pegar">¿Te pasaron un enlace de conexión? Pégalo aquí</label>
+          <div class="fila-pegar"><input id="cfg-pegar" type="text" inputmode="url" autocomplete="off" placeholder="https://…#cfg=…"><button class="btn small" id="cfg-pegar-ok" type="button">Conectar</button></div>
+        </div>
+        <details id="det-script">
+          <summary>Cómo instalar o actualizar el script</summary>
+          <div class="stack">
+            <p class="hint">Si ya tenías el script de antes, sigue "Actualizar". Tus pedidos no se tocan: solo se agregan columnas al final de la hoja.</p>
+            <h3 class="mini-t">Primera instalación</h3>
+            <ol class="pasos">
+              <li>Entra a script.google.com con la cuenta dueña de la hoja y crea un proyecto nuevo.</li>
+              <li>Borra lo que haya en el editor y pega todo el código del archivo Code.gs.</li>
+              <li>Cambia CAMBIA-ESTA-CLAVE por una frase tuya (mejor de 16 letras o más) y pega el ID de tu hoja en ID_HOJA.</li>
+              <li>Arriba elige la función autorizarPermisos, toca Ejecutar y acepta los permisos.</li>
+              <li>Implementar &gt; Nueva implementación &gt; Aplicación web. Ejecutar como "Yo", acceso "Cualquier persona".</li>
+              <li>Pega aquí la URL que termina en /exec y la misma clave. Toca Probar conexión y luego Guardar.</li>
+            </ol>
+            <h3 class="mini-t">Actualizar desde la versión anterior</h3>
+            <ol class="pasos">
+              <li>En el proyecto de Apps Script, pega el Code.gs nuevo encima del anterior y vuelve a escribir tu clave y el ID de la hoja.</li>
+              <li>Elige la función autorizarPermisos, toca Ejecutar y acepta los permisos nuevos (calendario, correo y Drive).</li>
+              <li>Implementar &gt; Administrar implementaciones &gt; el lápiz &gt; Versión: Nueva versión &gt; Implementar. La URL no cambia.</li>
+              <li>En Configuración del proyecto (la rueda dentada) deja la zona horaria en Bogotá.</li>
+              <li>Vuelve aquí, toca Probar conexión y debe decir versión 3.</li>
+            </ol>
+          </div>
+        </details>
+        <button class="btn small ghost" id="cfg-olvidar" type="button">Desconectar este dispositivo</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Usar en el celular</h2>
+      <div class="stack">
+        <p class="hint" id="cel-sin-conexion">Primero conecta tu hoja arriba. Cuando lo hagas, aquí aparece el enlace y el código QR para dejar el celular conectado sin escribir nada.</p>
+        <div id="cel-con-conexion" class="stack">
+          <p>Abre este enlace en el celular y queda conectado, sin escribir la URL ni la clave.</p>
+          <div class="acciones">
+            <button class="btn small" id="cel-copiar" type="button">Copiar enlace</button>
+            <button class="btn small" id="cel-compartir" type="button">Compartir</button>
+            <button class="btn small" id="cel-qr-btn" type="button">Mostrar código QR</button>
+          </div>
+          <div id="cel-qr" hidden></div>
+          <p class="hint"><strong>Cuidado:</strong> el enlace y el código incluyen la clave de tu hoja. Quien los tenga puede ver y cambiar tus pedidos. Compártelos solo con quien confías, por ejemplo tu socia.</p>
+        </div>
+        <div class="field">
+          <p class="hint" id="cel-instalar-txt"></p>
+          <button class="btn small primary" id="btn-instalar" type="button" hidden>Instalar la app</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Costos de impresión</h2>
+      <div class="aviso" id="aj-costos-v2" hidden><span><strong>Esto necesita el script nuevo.</strong> Mira "Cómo instalar o actualizar el script" arriba.</span></div>
+      <div class="stack" id="aj-costos-ok">
+        <p class="hint">Con esto la app calcula cuánto te cuesta cada pedido y cuánto ganas. Los valores los pones tú: yo no sé cuánto gasta tu filamento ni tus impresoras.</p>
+        <div class="grid2">
+          <div class="field">
+            <label for="cos-gramo">Costo por gramo de filamento</label>
+            <div class="money"><input id="cos-gramo" type="text" inputmode="decimal" autocomplete="off"></div>
+            <p class="hint">Precio del rollo dividido entre los gramos que trae.</p>
+          </div>
+          <div class="field">
+            <label for="cos-empaque">Empaque por defecto</label>
+            <div class="money"><input id="cos-empaque" type="text" inputmode="numeric" autocomplete="off"></div>
+            <p class="hint">Aparece ya escrito en cada pedido nuevo.</p>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl">Impresoras y su costo por hora</span>
+          <p class="hint">El costo por hora puede incluir la luz y el desgaste. Los nombres que pongas aquí salen para elegir en cada pedido.</p>
+          <div id="cos-imp" class="stack"></div>
+          <button class="btn small" id="cos-agregar-imp" type="button">+ Agregar impresora</button>
+        </div>
+        <div class="acciones">
+          <button class="btn primary" id="cos-guardar" type="button">Guardar costos</button>
+          <button class="btn small ghost" id="cos-recalcular" type="button">Recalcular pedidos anteriores</button>
+        </div>
+        <p class="hint">Cada pedido guarda su costo con los precios del momento. Si cambias los precios, el botón de recalcular actualiza los pedidos que ya tienen horas o gramos anotados.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Automatizaciones</h2>
+      <div class="aviso" id="aj-auto-v2" hidden><span><strong>Esto necesita el script nuevo.</strong> Mira "Cómo instalar o actualizar el script" arriba.</span></div>
+      <div class="stack" id="aj-auto-ok">
+        <div id="auto-avisos"></div>
+
+        <div class="auto-bloque">
+          <label class="switch"><input type="checkbox" id="auto-calendario" role="switch"><span class="sw-pista"></span><span class="sw-txt"><b>Entregas en Google Calendar</b><i>Cada entrega queda como evento de todo el día en un calendario llamado "Entregas Yi Shu", con aviso a las 9:00 a. m. del día anterior.</i></span></label>
+          <button class="btn small" id="auto-sync-cal" type="button" hidden>Sincronizar ahora</button>
+          <p class="hint">Para verlo en el celular, abre Google Calendar con esta misma cuenta. Para que tu socia lo vea, compártele el calendario "Entregas Yi Shu" desde Google Calendar. Los avisos de ella dependen de cómo tenga configuradas sus notificaciones.</p>
+        </div>
+
+        <div class="auto-bloque">
+          <label class="switch"><input type="checkbox" id="auto-resumen" role="switch"><span class="sw-pista"></span><span class="sw-txt"><b>Resumen diario por correo</b><i>Cada mañana te llega qué hay que entregar, qué está atrasado y qué falta por cobrar. Si no hay nada, no manda correo.</i></span></label>
+          <div class="grid2 collapse">
+            <div class="field"><label for="auto-hora">Hora aproximada</label><select id="auto-hora"></select></div>
+            <div class="field"><label for="auto-email">Correo (varios separados por coma)</label><input id="auto-email" type="text" inputmode="email" autocomplete="off"></div>
+          </div>
+          <div class="acciones">
+            <button class="btn small" id="auto-guardar-resumen" type="button">Guardar hora y correo</button>
+            <button class="btn small ghost" id="auto-probar-resumen" type="button">Enviarme uno de prueba</button>
+          </div>
+          <p class="hint">Google lo envía dentro de la hora que elijas, no a un minuto exacto. <span id="auto-resumen-ultimo"></span></p>
+        </div>
+
+        <div class="auto-bloque">
+          <label class="switch"><input type="checkbox" id="auto-respaldo" role="switch"><span class="sw-pista"></span><span class="sw-txt"><b>Copia de seguridad semanal</b><i>Los lunes de madrugada se guarda una copia de toda tu hoja en tu Drive.</i></span></label>
+          <button class="btn small" id="auto-respaldar" type="button">Hacer una copia ahora</button>
+          <p class="hint" id="auto-respaldo-ultimo"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Mis listas</h2>
+      <details>
+        <summary>Editar categorías, canales, métodos de pago y envíos</summary>
+        <div class="stack">
+          <p class="hint">Una opción por línea. "Otro" siempre se agrega solo. Si la hoja tiene el script nuevo, estas listas se comparten entre todos los dispositivos.</p>
+          <div class="field"><label for="lista-productos">Categorías de producto</label><textarea id="lista-productos" rows="6"></textarea></div>
+          <div class="field"><label for="lista-canales">Canales de contacto</label><textarea id="lista-canales" rows="5"></textarea></div>
+          <div class="field"><label for="lista-metodos">Métodos de pago</label><textarea id="lista-metodos" rows="4"></textarea></div>
+          <div class="field"><label for="lista-transportadoras">Transportadoras o medios de envío</label><textarea id="lista-transportadoras" rows="5"></textarea></div>
+          <div class="field"><label for="lista-gastos">Categorías de gastos</label><textarea id="lista-gastos" rows="6"></textarea></div>
+          <div class="acciones">
+            <button class="btn primary" id="lista-guardar" type="button">Guardar listas</button>
+            <button class="btn small ghost" id="lista-restaurar" type="button">Volver a las originales</button>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <p class="hint acerca" id="ver-app"></p>
+  </section>
+</main>
+
+<nav class="nav" id="nav" aria-label="Secciones">
+  <div class="wrap">
+    <button type="button" data-vista="nuevo" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Nuevo</span></button>
+    <button type="button" data-vista="pedidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Pedidos</span><b class="cnt" id="cuenta-activos" hidden>0</b></button>
+    <button type="button" data-vista="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Calendario</span></button>
+    <button type="button" data-vista="produccion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span>Producción</span><b class="cnt" id="cuenta-prod" hidden>0</b></button>
+    <button type="button" data-vista="numeros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-6"/></svg><span>Números</span></button>
+  </div>
+</nav>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<datalist id="dl-canales"></datalist>
+<datalist id="dl-transportadoras"></datalist>
+<datalist id="dl-metodos"></datalist>
+
+<!-- Diálogo: pedido guardado -->
+<dialog id="dlg-ok" aria-labelledby="ok-titulo">
+  <h2 id="ok-titulo">Pedido guardado</h2>
+  <p class="sub" id="ok-sub"></p>
+  <div class="field">
+    <label for="ok-mensaje">Mensaje para el cliente (lo puedes editar antes de copiarlo)</label>
+    <textarea id="ok-mensaje"></textarea>
+  </div>
+  <div class="acciones-dlg">
+    <button class="btn primary" id="ok-copiar" type="button">Copiar mensaje</button>
+    <button class="btn" id="ok-nuevo" type="button">Nuevo pedido</button>
+    <button class="btn ghost" id="ok-ver" type="button">Ver pedidos</button>
+  </div>
+</dialog>
+
+<!-- Diálogo: registrar pago -->
+<dialog id="dlg-pago" aria-labelledby="pago-titulo">
+  <h2 id="pago-titulo">Registrar pago</h2>
+  <p class="sub" id="pago-sub"></p>
+  <form id="form-pago" novalidate class="stack">
+    <div class="field">
+      <label for="pago-monto">Monto que pagó ahora</label>
+      <div class="money"><input id="pago-monto" type="text" inputmode="numeric" autocomplete="off"></div>
+      <p class="err" id="pago-err"></p>
+    </div>
+    <div class="field" role="group" aria-labelledby="lbl-pago-metodo">
+      <span class="lbl" id="lbl-pago-metodo">¿Cómo pagó?</span>
+      <div class="chips" id="chips-pago-metodo"></div>
+      <input id="pago-metodo-otro" type="text" placeholder="¿Cuál?" hidden>
+    </div>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="pago-ok" type="submit">Registrar</button>
+      <button class="btn ghost" id="pago-cancelar" type="button">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Diálogo: editar pedido -->
+<dialog id="dlg-editar" aria-labelledby="ed-titulo">
+  <h2 id="ed-titulo">Editar pedido</h2>
+  <p class="sub" id="ed-sub"></p>
+  <form id="form-editar" novalidate class="stack">
+    <p class="hint" id="ed-v2-nota" hidden>Tu hoja usa la versión anterior del script: por ahora solo puedes cambiar fechas, estado y entrega. Para editar todo lo demás, actualiza el script (Ajustes).</p>
+    <div class="grid2 collapse">
+      <div class="field"><label for="ed-cliente">Cliente</label><input id="ed-cliente" type="text" autocomplete="off" autocapitalize="words"></div>
+      <div class="field"><label for="ed-contacto">WhatsApp o teléfono</label><input id="ed-contacto" type="tel" inputmode="tel" autocomplete="off"></div>
+    </div>
+    <div class="grid2 collapse">
+      <div class="field"><label for="ed-canal">Canal</label><input id="ed-canal" type="text" list="dl-canales" autocomplete="off"></div>
+      <div class="field">
+        <label for="ed-fecha">Fecha del pedido</label>
+        <div class="fecha-wrap">
+          <input id="ed-fecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off">
+          <button type="button" class="cal-btn" data-cal="ed-fecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+          <input type="date" class="cal-sel" id="ed-fecha-sel" tabindex="-1" aria-hidden="true">
+        </div>
+      </div>
+    </div>
+    <div class="field"><label for="ed-producto">Producto (si hay varios, sepáralos con " + ")</label><input id="ed-producto" type="text" autocomplete="off" maxlength="160"></div>
+    <div class="grid2">
+      <div class="field"><label for="ed-cantidad">Cantidad</label><input id="ed-cantidad" type="number" min="1" max="999" inputmode="numeric"></div>
+      <div class="field"><label for="ed-total">Valor total</label><div class="money"><input id="ed-total" type="text" inputmode="numeric" autocomplete="off"></div></div>
+    </div>
+    <p class="hint" id="ed-pago-nota"></p>
+    <div class="field"><label for="ed-detalles">Detalles (color, tamaño, personalización)</label><textarea id="ed-detalles" rows="2" maxlength="600"></textarea></div>
+    <div class="grid2 collapse">
+      <div class="field"><label for="ed-estado">Estado</label><select id="ed-estado"></select></div>
+      <div class="field">
+        <label for="ed-entregaFecha">Fecha de entrega</label>
+        <div class="fecha-wrap">
+          <input id="ed-entregaFecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off">
+          <button type="button" class="cal-btn" data-cal="ed-entregaFecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+          <input type="date" class="cal-sel" id="ed-entregaFecha-sel" tabindex="-1" aria-hidden="true">
+        </div>
+      </div>
+    </div>
+    <div class="field" role="group" aria-labelledby="lbl-ed-tipo">
+      <span class="lbl" id="lbl-ed-tipo">¿Envío o recogida?</span>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="ed-tipo" value="Envío"><span>Envío</span></label>
+        <label class="chip"><input type="radio" name="ed-tipo" value="Recogida"><span>Lo recogen</span></label>
+      </div>
+    </div>
+    <div class="field"><label for="ed-via">Transportadora o punto de recogida</label><input id="ed-via" type="text" list="dl-transportadoras" autocomplete="off"></div>
+    <div class="field"><label for="ed-direccion">Dirección y ciudad</label><textarea id="ed-direccion" rows="2"></textarea></div>
+    <div class="field"><label for="ed-notas">Notas</label><textarea id="ed-notas" rows="2"></textarea></div>
+    <details id="bloque-costos-editar">
+      <summary>Costos de impresión</summary>
+      <div id="costos-editar-cont"></div>
+    </details>
+    <p class="err" id="ed-err"></p>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="ed-ok" type="submit">Guardar cambios</button>
+      <button class="btn ghost" id="ed-cancelar" type="button">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Diálogo: gasto -->
+<dialog id="dlg-gasto" aria-labelledby="gasto-titulo">
+  <h2 id="gasto-titulo">Nuevo gasto</h2>
+  <form id="form-gasto" novalidate class="stack">
+    <div class="field"><label for="g-concepto">¿En qué fue? <span class="req">*</span></label><input id="g-concepto" type="text" maxlength="120" autocomplete="off" placeholder="Ej: Rollo PLA negro"></div>
+    <div class="grid2">
+      <div class="field"><label for="g-monto">Monto <span class="req">*</span></label><div class="money"><input id="g-monto" type="text" inputmode="numeric" autocomplete="off"></div></div>
+      <div class="field">
+        <label for="g-fecha">Fecha</label>
+        <div class="fecha-wrap">
+          <input id="g-fecha" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off">
+          <button type="button" class="cal-btn" data-cal="g-fecha" aria-label="Elegir la fecha en un calendario"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+          <input type="date" class="cal-sel" id="g-fecha-sel" tabindex="-1" aria-hidden="true">
+        </div>
+      </div>
+    </div>
+    <div class="grid2 collapse">
+      <div class="field"><label for="g-categoria">Categoría</label><select id="g-categoria"></select></div>
+      <div class="field"><label for="g-metodo">Cómo se pagó</label><input id="g-metodo" type="text" list="dl-metodos" autocomplete="off" maxlength="40"></div>
+    </div>
+    <div class="field"><label for="g-notas">Notas</label><textarea id="g-notas" rows="2"></textarea></div>
+    <p class="err" id="g-err"></p>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="g-ok" type="submit">Guardar</button>
+      <button class="btn ghost" id="g-cancelar" type="button">Cancelar</button>
+      <button class="btn ghost peligro" id="g-eliminar" type="button" hidden>Borrar gasto</button>
+    </div>
+  </form>
+</dialog>
+
+<noscript><div class="wrap"><p class="aviso">Esta app necesita JavaScript activado para funcionar.</p></div></noscript>
+
+<script>
+__QR__
+</script>
+<script>
+(function () {
+'use strict';
+__JS__
+iniciar();
+})();
+</script>
+</body>
+</html>
