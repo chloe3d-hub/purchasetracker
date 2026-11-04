@@ -1,21 +1,24 @@
 /*
   Yi Shu Studio - Manager de la tienda (Google Apps Script) - versión 3
 
-  PRIMERA INSTALACIÓN
+  SI YA TIENES EL SCRIPT DE PEDIDOS FUNCIONANDO (el que ya está conectado a la app)
+  No crees un proyecto nuevo: un proyecto nuevo tendría otra URL y habría que reconectar todo.
+  1. Abre el mismo Apps Script que ya usas (el de la hoja del tracker), borra todo el código y pega este.
+  2. Vuelve a escribir tu CLAVE abajo. Tiene que ser LA MISMA que ya tienes en la app (Ajustes);
+     si pones otra, la app deja de conectar.
+  3. Arriba elige la función "autorizarPermisos" y toca Ejecutar. Acepta los permisos nuevos.
+     (Si ves "Google no ha verificado esta aplicación": Avanzado > Ir a tu proyecto. Es tu propio script.)
+  4. Implementar > Administrar implementaciones > lápiz > Versión: Nueva versión > Implementar.
+     La URL se mantiene igual y tus pedidos no se tocan: solo se agregan columnas al final.
+
+  PRIMERA INSTALACIÓN (solo si nunca has conectado la app a una hoja)
   1. Abre script.google.com con la MISMA cuenta de Google dueña de la hoja y toca "Nuevo proyecto".
   2. Borra lo que haya en el editor y pega todo este código.
   3. Cambia la CLAVE de abajo por una frase tuya (de 16 letras o más, mejor). La misma la pegas en la app.
   4. Arriba elige la función "autorizarPermisos" y toca Ejecutar. Acepta todos los permisos.
-     (Si ves "Google no ha verificado esta aplicación": Avanzado > Ir a tu proyecto. Es tu propio script.)
   5. Implementar > Nueva implementación > tipo "Aplicación web".
      Ejecutar como: Yo. Quién tiene acceso: Cualquier persona. Toca Implementar.
   6. Copia la URL que termina en /exec y pégala en la app (ícono de ajustes) junto con la clave.
-
-  ACTUALIZAR DESDE LA VERSIÓN ANTERIOR
-  1. Pega este código completo encima del anterior y vuelve a escribir tu CLAVE.
-  2. Ejecuta "autorizarPermisos" una vez y acepta los permisos nuevos.
-  3. Implementar > Administrar implementaciones > lápiz > Versión: Nueva versión > Implementar.
-     La URL se mantiene igual y tus pedidos no se tocan: solo se agregan columnas al final.
 
   Zona horaria: en Configuración del proyecto (rueda dentada) deja la zona horaria en
   "(GMT-05:00) Bogotá" para que las entregas del calendario caigan en el día correcto.
