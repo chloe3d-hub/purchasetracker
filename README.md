@@ -56,3 +56,4 @@ Cálculo habitual para ponerle precio a algo hecho a mano:
 - Los porcentajes de partida (margen 40 %, merma 10 %, comisión 0 %, redondeo a $1.000, hora de trabajo $0) son una sugerencia, no un dato de la tienda. La app avisa mientras no se guarden los propios.
 - Con el script versión 5 los porcentajes se guardan en la pestaña Config (`precios`) y los minutos de trabajo en la pestaña Fichas. Con el script 4 los porcentajes se guardan solo en el dispositivo y los minutos no se guardan en la ficha.
 - El costo que se registra en cada pedido no incluye la merma ni el trabajo: esos quedan dentro de la ganancia que muestra el pedido.
+- El empaque de Ajustes es por unidad: en cada pedido nuevo se escribe solo multiplicado por las unidades (hasta que se cambie a mano), y la calculadora de precio y el precio sugerido de cada ficha lo incluyen.

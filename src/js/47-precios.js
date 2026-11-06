@@ -53,7 +53,7 @@ function calcularPrecio(e, pr) {
 function entradaDeFicha(f, cant) {
   cant = cant > 0 ? cant : 1;
   return { impresora: f.impresora, gramos: (Number(f.gramos) || 0) * cant, horas: (Number(f.horas) || 0) * cant,
-    componentes: costoComponentes(f).total * cant, minutos: (Number(f.minutos) || 0) * cant, empaque: 0, envio: 0 };
+    componentes: costoComponentes(f).total * cant, minutos: (Number(f.minutos) || 0) * cant, empaque: (Number(S.config.empaque) || 0) * cant, envio: 0 };
 }
 function precioDeFicha(f) { return calcularPrecio(entradaDeFicha(f, 1), preciosGuardados()); }
 function precioCatalogo(f) {
@@ -185,7 +185,8 @@ function abrirPrecio(o) {
   pintarImpresoras('pr-', d.impresora || '');
   $('#pr-horas').value = d.horas > 0 ? numTxt(d.horas) : ''; $('#pr-gramos').value = d.gramos > 0 ? numTxt(d.gramos) : '';
   ponerDinero($('#pr-comps'), Number(d.otros) || 0); $('#pr-minutos').value = d.minutos > 0 ? numTxt(d.minutos) : '';
-  ponerDinero($('#pr-empaque'), d.empaque === undefined ? (Number(S.config.empaque) || 0) : (Number(d.empaque) || 0)); ponerDinero($('#pr-envio'), Number(d.envio) || 0);
+  var emp = d.empaque === undefined ? Math.round((Number(S.config.empaque) || 0) * Math.max(1, parseInt($('#pr-cant').value, 10) || 1)) : (Number(d.empaque) || 0);
+  ponerDinero($('#pr-empaque'), emp); $('#pr-empaque').dataset.tocado = d.empaque === undefined ? '' : '1'; ponerDinero($('#pr-envio'), Number(d.envio) || 0);
   if ($('#pr-ficha').value && !(o.datos)) llenarDesdeFicha();
   ponerParamsPrecio('pq-', preciosGuardados());
   $('#pr-params').open = false;
@@ -220,12 +221,16 @@ function ligarPrecios() {
   $('#pa-cont').innerHTML = htmlParamsPrecio('pa-');
   $('#pq-cont').innerHTML = htmlParamsPrecio('pq-');
   ['pa-', 'pq-'].forEach(function (p) { ligarDinero($('#' + p + 'hora'), p === 'pq-' ? recalcularPrecio : null); });
-  ['pr-comps', 'pr-empaque', 'pr-envio'].forEach(function (id) { ligarDinero($('#' + id), recalcularPrecio); });
+  ['pr-comps', 'pr-envio'].forEach(function (id) { ligarDinero($('#' + id), recalcularPrecio); });
+  ligarDinero($('#pr-empaque'), function () { $('#pr-empaque').dataset.tocado = '1'; recalcularPrecio(); });
   $('#pq-cont').addEventListener('input', recalcularPrecio); $('#pq-cont').addEventListener('change', recalcularPrecio);
   ['pr-horas', 'pr-gramos', 'pr-minutos'].forEach(function (id) { $('#' + id).addEventListener('input', recalcularPrecio); });
   $('#pr-impresora').addEventListener('change', recalcularPrecio);
   $('#pr-ficha').addEventListener('change', function () { llenarDesdeFicha(); recalcularPrecio(); });
-  $('#pr-cant').addEventListener('input', function () { llenarDesdeFicha(); recalcularPrecio(); });
+  $('#pr-cant').addEventListener('input', function () {
+    if (!$('#pr-empaque').dataset.tocado) ponerDinero($('#pr-empaque'), Math.round((Number(S.config.empaque) || 0) * Math.max(1, parseInt($('#pr-cant').value, 10) || 1)));
+    llenarDesdeFicha(); recalcularPrecio();
+  });
   $('#pr-cerrar').addEventListener('click', function () { cerrar($('#dlg-precio')); });
   $('#pr-usar').addEventListener('click', usarPrecioComoTotal);
   $('#pq-guardar').addEventListener('click', function () { guardarPreciosDe('pq-', this); });

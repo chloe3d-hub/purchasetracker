@@ -149,6 +149,7 @@ function onItemsClick(ev) {
     if ((it.nombre || it.detalles) && !confirm('¿Quitar este producto del pedido?')) return;
     el.remove(); actualizarItems();
   }
+  prellenarEmpaque();
 }
 
 /* Formulario: saldo */
@@ -308,9 +309,13 @@ function ponerCostos(p, o) {
 }
 function limpiarCostos(p) { ponerCostos(p, {}); $('#' + p + 'empaque').dataset.tocado = ''; pintarResumenCostos(p, soloNumero($('#total').value)); }
 /* Si definiste un empaque por defecto, aparece ya escrito en cada pedido nuevo (lo puedes cambiar). */
+/* El empaque de Ajustes es POR UNIDAD: en un pedido nuevo se escribe solo, multiplicado por las unidades, hasta que Lorena lo cambie a mano */
 function prellenarEmpaque() {
-  var inp = $('#c-empaque'); if (!inp || !esV3()) return;
-  if (inp.value === '' && !inp.dataset.tocado && Number(S.config.empaque) > 0) { ponerDinero(inp, Number(S.config.empaque)); pintarResumenCostos('c-', soloNumero($('#total').value)); }
+  var inp = $('#c-empaque'); if (!inp || !esV3() || inp.dataset.tocado) return;
+  var unidades = leerItems().reduce(function (s, it) { return s + it.cantidad; }, 0) || 1;
+  var nuevo = Math.round((Number(S.config.empaque) || 0) * unidades);
+  if ((nuevo > 0 ? miles(nuevo) : '') === inp.value) return;
+  ponerDinero(inp, nuevo); pintarResumenCostos('c-', soloNumero($('#total').value));
 }
 /* Misma cuenta que hace el script al guardar. Aquí solo sirve para mostrarla mientras escribes. */
 function calcularCostoLocal(c) {

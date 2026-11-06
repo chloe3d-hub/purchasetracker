@@ -70,7 +70,8 @@ function iniciar() {
   $('#form').addEventListener('submit', onGuardar);
   $('#btn-limpiar').addEventListener('click', function () { if (confirm('¿Borrar todo lo que escribiste en este pedido?')) limpiarFormulario(); });
   $('#items').addEventListener('click', onItemsClick);
-  $('#btn-agregar-item').addEventListener('click', function () { var el = agregarItem(); $('.it-producto', el).focus(); });
+  $('#btn-agregar-item').addEventListener('click', function () { var el = agregarItem(); $('.it-producto', el).focus(); prellenarEmpaque(); });
+  $('#items').addEventListener('input', function (ev) { if (ev.target.matches('.it-cant')) prellenarEmpaque(); });
   $('#pago-todo').addEventListener('click', function () { ponerDinero($('#pago'), soloNumero($('#total').value)); actualizarSaldo(); });
   $('#pago-mitad').addEventListener('click', function () { ponerDinero($('#pago'), Math.round(soloNumero($('#total').value) / 2)); actualizarSaldo(); });
   $('#pago-nada').addEventListener('click', function () { $('#pago').value = ''; actualizarSaldo(); });

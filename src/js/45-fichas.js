@@ -254,7 +254,7 @@ function pintarResumenFicha() {
   det.textContent = 'Filamento ' + dinero(c.filamento) + ' + impresora ' + dinero(c.impresora) + ' + componentes ' + dinero(c.componentes) + '.' +
     (av.length ? ' Ojo: ' + av.join('; ') + '. Eso cuenta como $0 hasta que lo llenes.' : '') + ' No incluye empaque ni envío.';
   var pp = calcularPrecio(entradaDeFicha(f, 1), preciosGuardados());
-  if (!pp.error) det.textContent += ' Precio sugerido hoy: ' + dinero(pp.precio) + ' (con tus porcentajes de Ajustes > Precios y margen).';
+  if (!pp.error) det.textContent += ' Precio sugerido hoy: ' + dinero(pp.precio) + (Number(S.config.empaque) > 0 ? ' (con el empaque de una unidad' : ' (sin empaque') + ' y con tus porcentajes de Ajustes > Precios y margen).';
 }
 function abrirFicha(datos) {
   datos = datos || {};
@@ -338,7 +338,7 @@ function itemFicha(f) {
   return '<div class="ficha-item"><div class="fi-txt"><b>' + esc(f.nombre) + '</b>' +
     '<span class="hint">' + (partes.length ? esc(partes.join(' · ')) : 'Sin datos todavía') + (comp ? ' · ' + esc(comp) : '') + '</span>' +
     (vacio ? '' : '<span class="hint">Costo de una unidad hoy: <b>' + dinero(c.total) + '</b>' + (av.length ? ' (incompleto: ' + esc(av[0]) + ')' : '') + '</span>') +
-    (pp && !pp.error ? '<span class="hint">Precio sugerido hoy: <b>' + dinero(pp.precio) + '</b>' + (cat ? ' · en el catálogo ' + dinero(cat) : '') + (preciosGuardados().propios ? '' : ' · con porcentajes de partida') + '</span>' : '') + '</div>' +
+    (pp && !pp.error ? '<span class="hint">Precio sugerido hoy: <b>' + dinero(pp.precio) + '</b>' + (cat ? ' · en el catálogo ' + dinero(cat) : '') + (Number(S.config.empaque) > 0 ? ' · con empaque' : '') + (preciosGuardados().propios ? '' : ' · con porcentajes de partida') + '</span>' : '') + '</div>' +
     '<div class="fi-acc">' + (vacio ? '' : '<button class="btn small" type="button" data-ficha-precio="' + esc(f.id) + '">Precio</button>') +
     '<button class="btn small ghost" type="button" data-ficha-editar="' + esc(f.id) + '">Editar</button></div></div>';
 }
