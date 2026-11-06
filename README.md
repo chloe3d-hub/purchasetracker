@@ -32,7 +32,7 @@ Con GitHub Pages activado, la app queda en https://chloe3d-hub.github.io/purchas
 3. Ejecuta la función `autorizarPermisos` y acepta los permisos (hoja, Calendar, correo y Drive). Si Google muestra "no ha verificado esta aplicación", entra por Avanzado > Ir a tu proyecto: es tu propio script.
 4. En Configuración del proyecto deja la zona horaria en Bogotá.
 5. Implementar > Nueva implementación > Aplicación web. Ejecutar como "Yo", acceso "Cualquier persona". Copia la URL que termina en `/exec`.
-6. Abre la app, toca el ícono de ajustes y pega la URL y la clave. Toca "Probar conexión" y luego "Guardar". Debe decir versión 4.
+6. Abre la app, toca el ícono de ajustes y pega la URL y la clave. Toca "Probar conexión" y luego "Guardar". Debe decir versión 5.
 
 **Abrirla en el celular**
 
@@ -40,8 +40,19 @@ En Ajustes hay un enlace y un código QR que llevan la conexión al celular sin 
 
 **Actualizar el script**
 
-Si cambias `Code.gs` después de implementarlo, ve a Implementar > Administrar implementaciones > lápiz > Nueva versión. La URL no cambia y los pedidos no se tocan. Con la versión 4 se crea sola una pestaña nueva llamada "Fichas".
+Si cambias `Code.gs` después de implementarlo, ve a Implementar > Administrar implementaciones > lápiz > Nueva versión. La URL no cambia y los pedidos no se tocan. Con la versión 4 se crea sola una pestaña nueva llamada "Fichas" y con la versión 5 se le agrega al final la columna de minutos de trabajo.
 
 **Privacidad**
 
 Este repositorio no contiene la URL del script, la clave ni el enlace de la hoja. Esos datos se escriben en los ajustes de la app y quedan guardados solo en el navegador de cada dispositivo. No los agregues a los archivos de este repositorio.
+
+## Calculadora de precio (versión 5)
+
+Cálculo habitual para ponerle precio a algo hecho a mano:
+
+- Costo real = filamento + impresora (luz, desgaste y mantenimiento) + impresiones que salen mal + componentes + tu trabajo + empaque y envío.
+- Precio = costo real / (1 - margen - comisión de cobro), redondeado hacia arriba. El margen es la parte del PRECIO que queda de ganancia, no un recargo sobre el costo.
+- Las impresiones que salen mal se suman como costo extra de filamento e impresora: con 10 % se imprime 1 / (1 - 0,10) veces lo necesario.
+- Los porcentajes de partida (margen 40 %, merma 10 %, comisión 0 %, redondeo a $1.000, hora de trabajo $0) son una sugerencia, no un dato de la tienda. La app avisa mientras no se guarden los propios.
+- Con el script versión 5 los porcentajes se guardan en la pestaña Config (`precios`) y los minutos de trabajo en la pestaña Fichas. Con el script 4 los porcentajes se guardan solo en el dispositivo y los minutos no se guardan en la ficha.
+- El costo que se registra en cada pedido no incluye la merma ni el trabajo: esos quedan dentro de la ganancia que muestra el pedido.

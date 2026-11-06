@@ -372,6 +372,15 @@ details .stack{padding-bottom:14px}
 .fl-pie{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fl-st{font-size:13px;color:var(--amber);flex:1}
 .fl-st:empty{display:none}
+.fi-acc{display:flex;gap:8px;flex-shrink:0}
+@media (max-width:420px){.ficha-item{flex-direction:column;align-items:stretch}.fi-acc{justify-content:flex-start}}
+.pr-desglose{display:grid;gap:2px}
+.pr-lin{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:14px;color:var(--muted)}
+.pr-lin b{color:var(--text);text-align:right;white-space:nowrap;font-weight:700}
+.pr-lin.pr-sep{margin-top:8px;color:var(--text);font-weight:700}
+.pr-lin.pr-unidad{color:var(--text);font-size:15px;padding-bottom:8px}
+#dlg-precio .money input,#dlg-precio input,#dlg-precio select{min-width:0}
+#pr-res{position:sticky;bottom:-8px;z-index:2}
 
 </style>
 </head>
@@ -453,6 +462,7 @@ details .stack{padding-bottom:14px}
               <label for="total">Valor total <span class="req">*</span></label>
               <div class="money"><input id="total" name="total" type="text" inputmode="numeric" autocomplete="off"></div>
               <p class="err" data-for="total"></p>
+              <button class="btn small ghost" id="btn-precio-nuevo" type="button">Calcular precio</button>
             </div>
             <div class="field">
               <label for="pago">Lo que ya pagó</label>
@@ -675,7 +685,7 @@ details .stack{padding-bottom:14px}
               <li>Elige la función autorizarPermisos, toca Ejecutar y acepta los permisos nuevos (calendario, correo y Drive).</li>
               <li>Implementar &gt; Administrar implementaciones &gt; el lápiz &gt; Versión: Nueva versión &gt; Implementar. La URL no cambia.</li>
               <li>En Configuración del proyecto (la rueda dentada) deja la zona horaria en Bogotá.</li>
-              <li>Vuelve aquí, toca Probar conexión y debe decir versión 4.</li>
+              <li>Vuelve aquí, toca Probar conexión y debe decir versión 5.</li>
             </ol>
           </div>
         </details>
@@ -781,6 +791,20 @@ details .stack{padding-bottom:14px}
         </details>
         <details id="fichas-hist-det"><summary>Sugerencias de tus pedidos anteriores <span id="fichas-hist-n" class="opc"></span></summary><div class="stack" id="fichas-hist"></div></details>
         <details id="fichas-sin-det"><summary>Productos del catálogo sin ficha <span id="fichas-sin-n" class="opc"></span></summary><div class="stack" id="fichas-sin"></div></details>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Precios y margen</h2>
+      <div class="stack">
+        <p class="hint">La calculadora toma el costo real (filamento, impresora, impresiones que salen mal, componentes, tu trabajo, empaque y envío) y lo divide entre 1 menos el margen y la comisión. Así el margen es de verdad lo que te queda de cada venta. Los números de abajo son una sugerencia mía para empezar: tú decides los tuyos.</p>
+        <div class="aviso" id="pa-v4" hidden><span><strong>Con tu script actual estos valores se guardan solo en este dispositivo.</strong> Para compartirlos con tu socia, actualiza el script a la versión 5.</span></div>
+        <div id="pa-cont" class="stack"></div>
+        <p class="hint" id="pa-estado" role="status"></p>
+        <div class="acciones">
+          <button class="btn primary" id="pa-guardar" type="button">Guardar</button>
+          <button class="btn small" id="pa-abrir" type="button">Abrir la calculadora</button>
+        </div>
       </div>
     </div>
 
@@ -923,7 +947,7 @@ details .stack{padding-bottom:14px}
     <div class="field"><label for="ed-producto">Producto (si hay varios, sepáralos con " + ")</label><input id="ed-producto" type="text" autocomplete="off" maxlength="160"></div>
     <div class="grid2">
       <div class="field"><label for="ed-cantidad">Cantidad</label><input id="ed-cantidad" type="number" min="1" max="999" inputmode="numeric"></div>
-      <div class="field"><label for="ed-total">Valor total</label><div class="money"><input id="ed-total" type="text" inputmode="numeric" autocomplete="off"></div></div>
+      <div class="field"><label for="ed-total">Valor total</label><div class="money"><input id="ed-total" type="text" inputmode="numeric" autocomplete="off"></div><button class="btn small ghost" id="btn-precio-editar" type="button">Calcular precio</button></div>
     </div>
     <p class="hint" id="ed-pago-nota"></p>
     <div class="field"><label for="ed-detalles">Detalles (color, tamaño, personalización)</label><textarea id="ed-detalles" rows="2" maxlength="600"></textarea></div>
@@ -1009,6 +1033,12 @@ details .stack{padding-bottom:14px}
       <div class="field"><label for="f-gramos">Gramos por unidad</label><input id="f-gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>
     </div>
     <div class="field">
+      <label for="f-minutos">Minutos de tu trabajo por unidad</label>
+      <input id="f-minutos" type="text" inputmode="decimal" placeholder="Ej: 30" autocomplete="off">
+      <p class="hint">Lijar, pintar, armar, empacar. Se usa solo en la calculadora de precio.</p>
+      <p class="hint" id="f-minutos-v4" hidden>Para guardar este dato en cada ficha hay que actualizar el script (versión 5).</p>
+    </div>
+    <div class="field">
       <span class="lbl">Componentes que lleva cada unidad</span>
       <div id="f-comps" class="stack"></div>
       <div class="acciones"><button type="button" class="btn small" id="f-comp-add">+ Agregar componente</button></div>
@@ -1024,6 +1054,46 @@ details .stack{padding-bottom:14px}
       <button class="btn ghost peligro" id="f-eliminar" type="button" hidden>Borrar ficha</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlg-precio" aria-labelledby="precio-titulo">
+  <h2 id="precio-titulo">Calculadora de precio</h2>
+  <p class="sub">Un estimado con tus costos de hoy. Es una guía: el precio final lo decides tú.</p>
+  <div class="stack">
+    <div class="field" id="pr-ficha-box">
+      <label for="pr-ficha">Rellenar con una ficha</label>
+      <select id="pr-ficha"></select>
+    </div>
+    <div class="field"><label for="pr-impresora">Impresora</label><select id="pr-impresora"></select></div>
+    <div class="grid2">
+      <div class="field"><label for="pr-cant">Unidades</label><input id="pr-cant" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></div>
+      <div class="field"><label for="pr-horas">Horas de impresión</label><input id="pr-horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" autocomplete="off"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="pr-gramos">Gramos de filamento</label><input id="pr-gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>
+      <div class="field"><label for="pr-minutos">Tu trabajo (minutos)</label><input id="pr-minutos" type="text" inputmode="decimal" placeholder="Ej: 30" autocomplete="off"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="pr-comps">Componentes y otros materiales</label><div class="money"><input id="pr-comps" type="text" inputmode="numeric" autocomplete="off"></div></div>
+      <div class="field"><label for="pr-empaque">Empaque</label><div class="money"><input id="pr-empaque" type="text" inputmode="numeric" autocomplete="off"></div></div>
+    </div>
+    <div class="field"><label for="pr-envio">Envío que paga el negocio</label><div class="money"><input id="pr-envio" type="text" inputmode="numeric" autocomplete="off"></div></div>
+    <details id="pr-params">
+      <summary>Margen y porcentajes de este cálculo</summary>
+      <div class="stack">
+        <div id="pq-cont" class="stack"></div>
+        <p class="hint">Los cambios de aquí valen solo para este cálculo. Para dejarlos fijos, toca el botón.</p>
+        <div class="acciones"><button class="btn small" id="pq-guardar" type="button">Guardar como mis valores</button></div>
+      </div>
+    </details>
+    <div class="saldo" id="pr-res" data-estado="vacio" aria-live="polite"><span class="t">Precio sugerido</span><span class="v">&mdash;</span></div>
+    <div id="pr-desglose" class="pr-desglose"></div>
+    <p class="hint" id="pr-nota" role="status"></p>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="pr-usar" type="button" hidden>Usar como valor total</button>
+      <button class="btn ghost" id="pr-cerrar" type="button">Cerrar</button>
+    </div>
+  </div>
 </dialog>
 
 <noscript><div class="wrap"><p class="aviso">Esta app necesita JavaScript activado para funcionar.</p></div></noscript>
@@ -1043,7 +1113,7 @@ var CONFIG = {
   URL_HOJA: ''
 };
 
-var APP_VERSION = '4.0';
+var APP_VERSION = '5.0';
 var URL_PUBLICA = 'https://chloe3d-hub.github.io/purchasetracker/';
 /* Lista de productos del catálogo web (mismo sitio de GitHub Pages). Solo sirve para sugerir nombres al crear fichas. */
 var CATALOGO_URL = 'https://chloe3d-hub.github.io/Catalogo/data/products.json';
@@ -1062,6 +1132,7 @@ var CONFIG_BASE = {
   luzKwh: 0,
   empaque: 0,
   componentes: [],
+  precios: { margen: 40, merma: 10, comision: 0, horaTrabajo: 0, redondeo: 1000, propios: false },
   listas: {},
   gastoCategorias: ['Filamento', 'Empaques', 'Envíos', 'Publicidad', 'Repuestos y mantenimiento', 'Electricidad', 'Equipos y herramientas', 'Componentes electrónicos', 'Otros'],
   calendario: false,
@@ -1070,7 +1141,7 @@ var CONFIG_BASE = {
   resumenEmail: '',
   respaldo: false
 };
-var LS = { cfg: 'ys.cfg.v1', listas: 'ys.listas.v2', pend: 'ys.pend.v1', pendg: 'ys.pendg.v1', cache: 'ys.cache.v1', datos: 'ys.datos.v3', migrado: 'ys.migrado.v3', ultimaVista: 'ys.vista.v3', catalogo: 'ys.catalogo.v1' };
+var LS = { cfg: 'ys.cfg.v1', listas: 'ys.listas.v2', pend: 'ys.pend.v1', pendg: 'ys.pendg.v1', cache: 'ys.cache.v1', datos: 'ys.datos.v3', migrado: 'ys.migrado.v3', ultimaVista: 'ys.vista.v3', catalogo: 'ys.catalogo.v1', precios: 'ys.precios.v1' };
 var MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 var MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -2326,6 +2397,7 @@ function fichaDelFormulario() {
     id: FICHA.id, nombre: $('#f-nombre').value.trim(), categoria: $('#f-categoria').value.trim(), impresora: $('#f-impresora').value,
     horas: $('#f-horas').value.trim() === '' ? '' : decimalDe($('#f-horas').value),
     gramos: $('#f-gramos').value.trim() === '' ? '' : decimalDe($('#f-gramos').value),
+    minutos: $('#f-minutos').value.trim() === '' ? '' : decimalDe($('#f-minutos').value),
     componentes: leerCompsFicha().filter(function (c) { return c.nombre; }).map(function (c) { return { nombre: c.nombre, cantidad: c.cantidad > 0 ? c.cantidad : 1 }; }),
     notas: $('#f-notas').value.trim(), catalogoId: FICHA.catalogoId
   };
@@ -2342,6 +2414,8 @@ function pintarResumenFicha() {
   var av = avisosCosto(c, f);
   det.textContent = 'Filamento ' + dinero(c.filamento) + ' + impresora ' + dinero(c.impresora) + ' + componentes ' + dinero(c.componentes) + '.' +
     (av.length ? ' Ojo: ' + av.join('; ') + '. Eso cuenta como $0 hasta que lo llenes.' : '') + ' No incluye empaque ni envío.';
+  var pp = calcularPrecio(entradaDeFicha(f, 1), preciosGuardados());
+  if (!pp.error) det.textContent += ' Precio sugerido hoy: ' + dinero(pp.precio) + ' (con tus porcentajes de Ajustes > Precios y margen).';
 }
 function abrirFicha(datos) {
   datos = datos || {};
@@ -2359,6 +2433,8 @@ function abrirFicha(datos) {
   sel.value = src.impresora || '';
   $('#f-horas').value = src.horas === '' || src.horas == null ? '' : numTxt(src.horas);
   $('#f-gramos').value = src.gramos === '' || src.gramos == null ? '' : numTxt(src.gramos);
+  $('#f-minutos').value = src.minutos === '' || src.minutos == null ? '' : numTxt(src.minutos);
+  $('#f-minutos').disabled = !esV5(); $('#f-minutos-v4').hidden = esV5();
   $('#f-comps').innerHTML = '';
   (f ? f.componentes : []).forEach(function (c) { agregarFilaCompFicha(c.nombre, c.cantidad); });
   $('#f-comp-hint').textContent = (S.config.componentes || []).length ? '' : 'Todavía no tienes componentes. Créalos en Ajustes > Componentes y vuelve aquí.';
@@ -2381,6 +2457,7 @@ function onFicha(ev) {
   var otra = fichaPorNombre(f.nombre); if (otra && otra.id !== FICHA.id) msgs.push('Ya existe una ficha con ese nombre. Ábrela desde la lista y edítala en vez de crear otra.');
   if (!decimalOk($('#f-horas').value)) msgs.push('Horas: escribe solo el número, por ejemplo 3,5.');
   if (!decimalOk($('#f-gramos').value)) msgs.push('Gramos: escribe solo el número, por ejemplo 120.');
+  if (!decimalOk($('#f-minutos').value)) msgs.push('Minutos de trabajo: escribe solo el número, por ejemplo 30.');
   var vistos = {};
   leerCompsFicha().forEach(function (c) {
     if (!c.nombre) return;
@@ -2411,16 +2488,20 @@ function coincideBusqueda(txt, q) { return !q || String(txt).toLowerCase().index
 function itemFicha(f) {
   var c = costoFicha(f), av = avisosCosto(c, f);
   var partes = [];
+  var pp = (Number(f.horas) > 0 || Number(f.gramos) > 0 || (f.componentes || []).length) ? precioDeFicha(f) : null, cat = precioCatalogo(f);
   if (f.categoria) partes.push(f.categoria);
   if (f.impresora) partes.push(f.impresora);
   if (Number(f.horas) > 0) partes.push(numTxt(f.horas) + ' h');
   if (Number(f.gramos) > 0) partes.push(numTxt(f.gramos) + ' g');
+  if (Number(f.minutos) > 0) partes.push(numTxt(f.minutos) + ' min de trabajo');
   var comp = (f.componentes || []).map(function (x) { return x.nombre + (Number(x.cantidad) !== 1 ? ' ×' + numTxt(x.cantidad) : ''); }).join(', ');
   var vacio = !(Number(f.horas) > 0) && !(Number(f.gramos) > 0) && !(f.componentes || []).length;
   return '<div class="ficha-item"><div class="fi-txt"><b>' + esc(f.nombre) + '</b>' +
     '<span class="hint">' + (partes.length ? esc(partes.join(' · ')) : 'Sin datos todavía') + (comp ? ' · ' + esc(comp) : '') + '</span>' +
-    (vacio ? '' : '<span class="hint">Costo de una unidad hoy: <b>' + dinero(c.total) + '</b>' + (av.length ? ' (incompleto: ' + esc(av[0]) + ')' : '') + '</span>') + '</div>' +
-    '<button class="btn small ghost" type="button" data-ficha-editar="' + esc(f.id) + '">Editar</button></div>';
+    (vacio ? '' : '<span class="hint">Costo de una unidad hoy: <b>' + dinero(c.total) + '</b>' + (av.length ? ' (incompleto: ' + esc(av[0]) + ')' : '') + '</span>') +
+    (pp && !pp.error ? '<span class="hint">Precio sugerido hoy: <b>' + dinero(pp.precio) + '</b>' + (cat ? ' · en el catálogo ' + dinero(cat) : '') + (preciosGuardados().propios ? '' : ' · con porcentajes de partida') + '</span>' : '') + '</div>' +
+    '<div class="fi-acc">' + (vacio ? '' : '<button class="btn small" type="button" data-ficha-precio="' + esc(f.id) + '">Precio</button>') +
+    '<button class="btn small ghost" type="button" data-ficha-editar="' + esc(f.id) + '">Editar</button></div></div>';
 }
 /* Pedidos anteriores con un solo producto y con horas o gramos anotados: se promedian por unidad */
 function sugerenciasHistorial() {
@@ -2548,7 +2629,7 @@ function ligarFichas() {
   $('#f-eliminar').addEventListener('click', eliminarFichaActual);
   $('#f-nombre').addEventListener('input', onFichaNombre);
   $('#f-nombre').addEventListener('change', onFichaNombre);
-  ['f-horas', 'f-gramos'].forEach(function (id) { $('#' + id).addEventListener('input', pintarResumenFicha); });
+  ['f-horas', 'f-gramos', 'f-minutos'].forEach(function (id) { $('#' + id).addEventListener('input', pintarResumenFicha); });
   $('#f-impresora').addEventListener('change', pintarResumenFicha);
   $('#f-comp-add').addEventListener('click', function () { var fila = agregarFilaCompFicha(); $('.fc-sel', fila).focus(); pintarResumenFicha(); });
   $('#f-comps').addEventListener('change', pintarResumenFicha);
@@ -2713,6 +2794,248 @@ function ligarListaFichas() {
     b.closest('.fl-fila').remove();
     if ($$('#fl-filas .fl-fila').length) refrescarListaPegada(); else $('#fl-prev').hidden = true;
   });
+}
+
+/* 47-precios.js */
+/* Calculadora de precio.
+   Forma habitual de ponerle precio a algo que se hace a mano:
+     costo real = filamento + máquina + merma (impresiones que salen mal) + componentes + tu trabajo + empaque y envío
+     precio     = costo real / (1 - margen - comisión de cobro), redondeado hacia arriba
+   El margen es la parte DEL PRECIO que queda de ganancia (no un recargo sobre el costo). Con margen 40 %, de cada $100 que
+   cobras, $40 son ganancia. La comisión también se descuenta del precio final, por eso va en el mismo divisor.
+   Los porcentajes de partida son una sugerencia: hasta que Lorena los guarda, la app lo dice. */
+
+var PRECIOS_BASE = { margen: 40, merma: 10, comision: 0, horaTrabajo: 0, redondeo: 1000, propios: false };
+var REDONDEOS = [[0, 'Sin redondear'], [100, 'A los $100'], [500, 'A los $500'], [1000, 'A los $1.000'], [5000, 'A los $5.000']];
+var PR = { destino: '', fichaId: '' };           // destino: casilla del pedido donde "Usar como valor total" deja el precio
+
+function esV5() { return S.version >= 5; }
+
+/* Los valores que se usan hoy: los de la hoja (versión 5), los de este dispositivo, o los de partida */
+function preciosGuardados() {
+  var hoja = S.config.precios, local = leer(LS.precios, null);
+  if (esV5() && hoja && hoja.propios) return Object.assign({}, PRECIOS_BASE, hoja);
+  if (local && local.propios) return Object.assign({}, PRECIOS_BASE, local);
+  return Object.assign({}, PRECIOS_BASE, esV5() && hoja ? hoja : {}, { propios: false });
+}
+
+/* ---------- Cálculo (no toca la pantalla) ---------- */
+function calcularPrecio(e, pr) {
+  var cg = Number(S.config.costoGramo) || 0, ph = precioHoraDe(e.impresora);
+  var gramos = Number(e.gramos) || 0, horas = Number(e.horas) || 0;
+  var fil = gramos * cg, imp = horas * ph;
+  var fallo = Math.min(Math.max(Number(pr.merma) || 0, 0), 50) / 100;
+  var merma = (fil + imp) * (fallo / (1 - fallo));         // si 10 % de las impresiones fallan, hay que imprimir 1/(1-0,10) veces
+  var comps = Number(e.componentes) || 0;
+  var trabajo = (Number(e.minutos) || 0) / 60 * (Number(pr.horaTrabajo) || 0);
+  var empaque = Number(e.empaque) || 0, envio = Number(e.envio) || 0;
+  var costo = fil + imp + merma + comps + trabajo + empaque + envio;
+  var com = (Number(pr.comision) || 0) / 100, mar = (Number(pr.margen) || 0) / 100, divisor = 1 - mar - com;
+  var r = { filamento: fil, impresora: imp, merma: merma, componentes: comps, trabajo: trabajo, empaque: empaque, envio: envio,
+    costo: costo, precio: 0, ganancia: 0, margenReal: 0, equilibrio: 0, veces: 0, avisos: [], error: '' };
+  if (gramos > 0 && !(cg > 0)) r.avisos.push('falta el costo por gramo (Ajustes > Costos de impresión)');
+  if (horas > 0 && !(ph > 0)) r.avisos.push(e.impresora ? 'falta el costo por hora de ' + e.impresora : 'falta elegir la impresora');
+  if ((Number(e.minutos) || 0) > 0 && !(Number(pr.horaTrabajo) > 0)) r.avisos.push('tu trabajo cuenta como $0 porque falta el valor de tu hora');
+  if (!(costo > 0)) { r.error = 'Escribe las horas, los gramos u otros costos para ver el precio.'; return r; }
+  if (divisor < 0.05) { r.error = 'El margen y la comisión suman demasiado: no alcanza para calcular.'; return r; }
+  var crudo = costo / divisor, paso = Number(pr.redondeo) || 0;
+  r.precio = paso > 0 ? Math.ceil(crudo / paso - 1e-9) * paso : Math.round(crudo);
+  r.ganancia = r.precio - costo - r.precio * com;
+  r.margenReal = r.precio > 0 ? r.ganancia / r.precio : 0;
+  r.equilibrio = costo / (1 - com);
+  r.veces = r.precio / costo;
+  r.comisionPesos = r.precio * com;
+  return r;
+}
+
+/* Lo que cuesta y vale UNA unidad (o N) de una ficha, para mostrar en las listas */
+function entradaDeFicha(f, cant) {
+  cant = cant > 0 ? cant : 1;
+  return { impresora: f.impresora, gramos: (Number(f.gramos) || 0) * cant, horas: (Number(f.horas) || 0) * cant,
+    componentes: costoComponentes(f).total * cant, minutos: (Number(f.minutos) || 0) * cant, empaque: 0, envio: 0 };
+}
+function precioDeFicha(f) { return calcularPrecio(entradaDeFicha(f, 1), preciosGuardados()); }
+function precioCatalogo(f) {
+  var cp = f && f.catalogoId ? productoCatalogoPorId(f.catalogoId) : null;
+  if (!cp) cp = f ? productoCatalogoPorNombre(f.nombre) : null;
+  if (!cp || !/^\$?\s*[\d.]+$/.test(String(cp.precio || '').trim())) return 0;
+  return soloNumero(cp.precio);
+}
+
+/* ---------- Los porcentajes (Ajustes y el cuadro de la calculadora comparten esto) ---------- */
+function htmlParamsPrecio(p) {
+  var opts = REDONDEOS.map(function (r) { return '<option value="' + r[0] + '">' + r[1] + '</option>'; }).join('');
+  return '<div class="grid2">' +
+    '<div class="field"><label for="' + p + 'margen">Margen de ganancia (%)</label><input id="' + p + 'margen" type="text" inputmode="decimal" autocomplete="off"><p class="hint">De cada $100 que cobras, cuántos son ganancia.</p></div>' +
+    '<div class="field"><label for="' + p + 'merma">Impresiones que salen mal (%)</label><input id="' + p + 'merma" type="text" inputmode="decimal" autocomplete="off"><p class="hint">De cada 100 impresiones, cuántas se repiten o se pierden.</p></div>' +
+    '</div><div class="grid2">' +
+    '<div class="field"><label for="' + p + 'comision">Comisión de cobro (%)</label><input id="' + p + 'comision" type="text" inputmode="decimal" autocomplete="off"><p class="hint">Pasarela o plataforma de pago. Con transferencia o efectivo, déjala en 0.</p></div>' +
+    '<div class="field"><label for="' + p + 'hora">Valor de tu hora de trabajo</label><div class="money"><input id="' + p + 'hora" type="text" inputmode="numeric" autocomplete="off"></div><p class="hint">Armar, lijar, pintar, empacar y atender. En 0, tu trabajo sale gratis.</p></div>' +
+    '</div>' +
+    '<div class="field"><label for="' + p + 'redondeo">Redondear el precio hacia arriba</label><select id="' + p + 'redondeo">' + opts + '</select></div>';
+}
+function ponerParamsPrecio(p, pr) {
+  $('#' + p + 'margen').value = numTxt(pr.margen); $('#' + p + 'merma').value = numTxt(pr.merma); $('#' + p + 'comision').value = numTxt(pr.comision);
+  ponerDinero($('#' + p + 'hora'), Number(pr.horaTrabajo) || 0); $('#' + p + 'redondeo').value = String(pr.redondeo);
+}
+function leerParamsPrecio(p) {
+  return { margen: decimalDe($('#' + p + 'margen').value), merma: decimalDe($('#' + p + 'merma').value), comision: decimalDe($('#' + p + 'comision').value),
+    horaTrabajo: soloNumero($('#' + p + 'hora').value), redondeo: parseInt($('#' + p + 'redondeo').value, 10) || 0 };
+}
+function errorParamsPrecio(p, pr) {
+  if (!decimalOk($('#' + p + 'margen').value) || !decimalOk($('#' + p + 'merma').value) || !decimalOk($('#' + p + 'comision').value)) return 'Los porcentajes deben ser solo números, por ejemplo 40 o 2,5.';
+  if (pr.margen < 0 || pr.margen > 90) return 'El margen debe estar entre 0 y 90 %.';
+  if (pr.merma < 0 || pr.merma > 50) return 'Las impresiones que salen mal deben estar entre 0 y 50 %.';
+  if (pr.comision < 0 || pr.comision > 30) return 'La comisión debe estar entre 0 y 30 %.';
+  if (pr.margen + pr.comision > 95) return 'El margen y la comisión no pueden sumar más de 95 %.';
+  return '';
+}
+function guardarPreciosDe(p, btn) {
+  var pr = leerParamsPrecio(p), err = errorParamsPrecio(p, pr);
+  if (err) { toast(err, 'error'); return Promise.resolve(); }
+  if (!esV5()) {
+    guardar(LS.precios, Object.assign({}, pr, { propios: true }));
+    toast('Guardado en este dispositivo. Para compartirlo con tu socia hay que actualizar el script (versión 5).');
+    afterPrecios(); return Promise.resolve();
+  }
+  return trabajando(btn, 'Guardando…', function () {
+    return api('config_guardar', { config: { precios: pr } }).then(function (r) {
+      S.config = Object.assign(clonar(CONFIG_BASE), r.config || {}); guardarDatos(); afterPrecios();
+      toast('Listo. Estos porcentajes quedaron guardados para todos los dispositivos.');
+    });
+  }).catch(function (e) { toast(mensajeDe(e), 'error'); });
+}
+function afterPrecios() {
+  if (S.vista === 'ajustes') { pintarPreciosAjustes(); pintarFichas(); }
+  if ($('#dlg-precio').open) { ponerParamsPrecio('pq-', preciosGuardados()); recalcularPrecio(); }
+}
+
+/* ---------- Ajustes > Precios y margen ---------- */
+function pintarPreciosAjustes() {
+  var pr = preciosGuardados();
+  ponerParamsPrecio('pa-', pr);
+  var st = $('#pa-estado');
+  st.textContent = pr.propios
+    ? (esV5() && S.config.precios && S.config.precios.propios ? 'Guardado en tu hoja: lo usan todos los dispositivos.' : 'Guardado solo en este dispositivo.')
+    : 'Son valores de partida que sugiero yo. Cámbialos por los tuyos y toca Guardar.';
+  $('#pa-v4').hidden = esV5() || !S.cfg.url;
+}
+
+/* ---------- La calculadora ---------- */
+function dineroDe(id) { return soloNumero($('#' + id).value); }
+function decDe(id) { var t = $('#' + id).value.trim(); return t === '' ? 0 : decimalDe(t); }
+function opcionesFichasPrecio() {
+  var sel = $('#pr-ficha'), previo = sel.value;
+  var fs = S.fichas.slice().sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
+  sel.innerHTML = '<option value="">Ninguna: escribo los números</option>' + fs.map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; }).join('');
+  sel.value = previo && buscarFicha(previo) ? previo : '';
+  $('#pr-ficha-box').hidden = !fs.length;
+}
+function llenarDesdeFicha() {
+  var f = $('#pr-ficha').value ? buscarFicha($('#pr-ficha').value) : null; if (!f) return;
+  var cant = Math.max(1, parseInt($('#pr-cant').value, 10) || 1), e = entradaDeFicha(f, cant);
+  pintarImpresoras('pr-', f.impresora || '');
+  $('#pr-horas').value = e.horas > 0 ? numTxt(e.horas) : ''; $('#pr-gramos').value = e.gramos > 0 ? numTxt(e.gramos) : '';
+  ponerDinero($('#pr-comps'), Math.round(e.componentes)); $('#pr-minutos').value = e.minutos > 0 ? numTxt(e.minutos) : '';
+}
+function entradaDeCalculadora() {
+  return { impresora: $('#pr-impresora').value, horas: decDe('pr-horas'), gramos: decDe('pr-gramos'), componentes: dineroDe('pr-comps'),
+    minutos: decDe('pr-minutos'), empaque: dineroDe('pr-empaque'), envio: dineroDe('pr-envio') };
+}
+function lineaDesglose(txt, valor) { return '<div class="pr-lin"><span>' + esc(txt) + '</span><b>' + dinero(valor) + '</b></div>'; }
+function recalcularPrecio() {
+  var pr = leerParamsPrecio('pq-'), box = $('#pr-res'), det = $('#pr-desglose'), nota = $('#pr-nota'), usar = $('#pr-usar');
+  var err = errorParamsPrecio('pq-', pr);
+  var e = entradaDeCalculadora(), r = calcularPrecio(e, pr), cant = Math.max(1, parseInt($('#pr-cant').value, 10) || 1);
+  usar.hidden = !PR.destino; usar.disabled = true;
+  if (err) { box.setAttribute('data-estado', 'vacio'); $('.v', box).textContent = '—'; det.innerHTML = ''; nota.textContent = err; return; }
+  if (r.error) { box.setAttribute('data-estado', 'vacio'); $('.v', box).textContent = '—'; det.innerHTML = ''; nota.textContent = r.error; return; }
+  box.setAttribute('data-estado', 'pagado'); $('.v', box).textContent = dinero(r.precio);
+  usar.disabled = false;
+  var f = $('#pr-ficha').value ? buscarFicha($('#pr-ficha').value) : null, cat = f ? precioCatalogo(f) : 0;
+  var lin = [];
+  if (cant > 1) lin.push('<div class="pr-lin pr-unidad"><span>Por unidad (' + cant + ' unidades)</span><b>' + dinero(Math.ceil(r.precio / cant)) + '</b></div>');
+  lin.push(lineaDesglose('Filamento', r.filamento), lineaDesglose('Impresora (luz, desgaste y mantenimiento)', r.impresora));
+  if (r.merma > 0) lin.push(lineaDesglose('Impresiones que salen mal', r.merma));
+  if (r.componentes > 0) lin.push(lineaDesglose('Componentes y otros materiales', r.componentes));
+  if (r.trabajo > 0) lin.push(lineaDesglose('Tu trabajo', r.trabajo));
+  if (r.empaque + r.envio > 0) lin.push(lineaDesglose('Empaque y envío', r.empaque + r.envio));
+  lin.push('<div class="pr-lin pr-sep"><span>Costo real</span><b>' + dinero(r.costo) + '</b></div>');
+  if (r.comisionPesos > 0) lin.push(lineaDesglose('Comisión de cobro', r.comisionPesos));
+  lin.push('<div class="pr-lin"><span>Ganancia</span><b>' + dinero(r.ganancia) + ' · ' + Math.round(r.margenReal * 100) + ' %</b></div>');
+  lin.push('<div class="pr-lin"><span>Precio mínimo para no perder</span><b>' + dinero(Math.ceil(r.equilibrio)) + '</b></div>');
+  lin.push('<div class="pr-lin"><span>Equivale a cobrar</span><b>' + numTxt(Math.round(r.veces * 100) / 100) + ' veces el costo</b></div>');
+  if (cat > 0) {
+    var tot = cat * cant, gan = tot - r.costo - tot * (pr.comision / 100);
+    lin.push('<div class="pr-lin"><span>En tu catálogo (' + dinero(cat) + ' c/u)</span><b>' + (gan >= 0 ? 'ganancia ' + dinero(gan) + ' · ' + Math.round(gan * 100 / tot) + ' %' : 'pérdida ' + dinero(-gan)) + '</b></div>');
+  }
+  det.innerHTML = lin.join('');
+  nota.textContent = (r.avisos.length ? 'Ojo: ' + r.avisos.join('; ') + '. ' : '') +
+    (preciosGuardados().propios ? '' : 'Los porcentajes son valores de partida: ajústalos y guárdalos en Ajustes > Precios y margen. ') +
+    'El pedido solo registra como costo lo de impresión, componentes, empaque y envío: la merma y tu trabajo quedan dentro de la ganancia.';
+}
+function abrirPrecio(o) {
+  o = o || {};
+  PR = { destino: o.destino || '', fichaId: '' };
+  opcionesFichasPrecio();
+  $('#pr-ficha').value = o.fichaId && buscarFicha(o.fichaId) ? o.fichaId : '';
+  $('#pr-cant').value = String(Math.max(1, parseInt(o.cant, 10) || 1));
+  var d = o.datos || {};
+  pintarImpresoras('pr-', d.impresora || '');
+  $('#pr-horas').value = d.horas > 0 ? numTxt(d.horas) : ''; $('#pr-gramos').value = d.gramos > 0 ? numTxt(d.gramos) : '';
+  ponerDinero($('#pr-comps'), Number(d.otros) || 0); $('#pr-minutos').value = d.minutos > 0 ? numTxt(d.minutos) : '';
+  ponerDinero($('#pr-empaque'), d.empaque === undefined ? (Number(S.config.empaque) || 0) : (Number(d.empaque) || 0)); ponerDinero($('#pr-envio'), Number(d.envio) || 0);
+  if ($('#pr-ficha').value && !(o.datos)) llenarDesdeFicha();
+  ponerParamsPrecio('pq-', preciosGuardados());
+  $('#pr-params').open = false;
+  $('#pr-usar').hidden = !PR.destino;
+  recalcularPrecio();
+  abrir($('#dlg-precio'));
+}
+
+/* Desde "Nuevo pedido" o "Editar": parte de los números que ya hay escritos en el bloque de costos */
+function abrirPrecioDesdePedido(p) {
+  var c = leerCostos(p), minutos = 0, cant = 1;
+  $$('#' + p + 'fichas .ficha-fila').forEach(function (fila) {
+    var f = buscarFicha($('.ff-sel', fila).value), n = Math.max(1, parseInt($('.ff-cant', fila).value, 10) || 1);
+    if (f) { minutos += (Number(f.minutos) || 0) * n; }
+  });
+  if (p === 'c-') { cant = leerItems().reduce(function (s, it) { return s + it.cantidad; }, 0) || 1; }
+  else { cant = parseInt($('#ed-cantidad').value, 10) || 1; }
+  abrirPrecio({ destino: p === 'c-' ? 'total' : 'ed-total', cant: cant,
+    datos: { impresora: c.impresora, horas: Number(c.horas) || 0, gramos: Number(c.gramos) || 0, otros: Number(c.otros) || 0, minutos: minutos,
+      empaque: Number(c.empaque) || 0, envio: Number(c.envioNegocio) || 0 } });
+}
+function usarPrecioComoTotal() {
+  var pr = leerParamsPrecio('pq-'), r = calcularPrecio(entradaDeCalculadora(), pr);
+  if (!(r.precio > 0)) return;
+  var el = $('#' + PR.destino); if (!el) return;
+  ponerDinero(el, r.precio);
+  try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
+  cerrar($('#dlg-precio')); toast('Valor total puesto en ' + dinero(r.precio) + '. Lo puedes cambiar.');
+}
+
+function ligarPrecios() {
+  $('#pa-cont').innerHTML = htmlParamsPrecio('pa-');
+  $('#pq-cont').innerHTML = htmlParamsPrecio('pq-');
+  ['pa-', 'pq-'].forEach(function (p) { ligarDinero($('#' + p + 'hora'), p === 'pq-' ? recalcularPrecio : null); });
+  ['pr-comps', 'pr-empaque', 'pr-envio'].forEach(function (id) { ligarDinero($('#' + id), recalcularPrecio); });
+  $('#pq-cont').addEventListener('input', recalcularPrecio); $('#pq-cont').addEventListener('change', recalcularPrecio);
+  ['pr-horas', 'pr-gramos', 'pr-minutos'].forEach(function (id) { $('#' + id).addEventListener('input', recalcularPrecio); });
+  $('#pr-impresora').addEventListener('change', recalcularPrecio);
+  $('#pr-ficha').addEventListener('change', function () { llenarDesdeFicha(); recalcularPrecio(); });
+  $('#pr-cant').addEventListener('input', function () { llenarDesdeFicha(); recalcularPrecio(); });
+  $('#pr-cerrar').addEventListener('click', function () { cerrar($('#dlg-precio')); });
+  $('#pr-usar').addEventListener('click', usarPrecioComoTotal);
+  $('#pq-guardar').addEventListener('click', function () { guardarPreciosDe('pq-', this); });
+  $('#pa-guardar').addEventListener('click', function () { guardarPreciosDe('pa-', this); });
+  $('#pa-abrir').addEventListener('click', function () { abrirPrecio({}); });
+  $('#btn-precio-nuevo').addEventListener('click', function () { abrirPrecioDesdePedido('c-'); });
+  $('#btn-precio-editar').addEventListener('click', function () { abrirPrecioDesdePedido('ed-c-'); });
+  $('#fichas-lista').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-ficha-precio]'); if (b) abrirPrecio({ fichaId: b.dataset.fichaPrecio });
+  });
+  pintarPreciosAjustes();
 }
 
 /* 50-calendario.js */
@@ -3260,7 +3583,8 @@ function mensajeDe(e) {
 /* Conexión */
 function nombreVersion() {
   if (!S.cfg.url || !S.cfg.clave) return 'Aún no hay una hoja conectada en este dispositivo.';
-  if (S.version >= 4) return 'Script de la hoja: versión ' + S.version + '. Está al día, tienes todas las funciones.';
+  if (S.version >= 5) return 'Script de la hoja: versión ' + S.version + '. Está al día, tienes todas las funciones.';
+  if (S.version === 4) return 'Script de la hoja: versión 4. Todo funciona. La versión 5 agrega guardar en la hoja los porcentajes de la calculadora de precio y los minutos de trabajo de cada ficha (mientras tanto se guardan solo en este dispositivo).';
   if (S.version === 3) return 'Script de la hoja: versión 3. Todo lo anterior funciona, pero faltan las fichas de costo, el precio de la luz y los componentes (actualízalo con los pasos de abajo).';
   if (S.version === 2) return 'Script de la hoja: versión anterior. Los pedidos funcionan, pero faltan el calendario de Google, los costos, los gastos y el resumen por correo.';
   return 'Todavía no sé qué versión del script tiene tu hoja. Toca "Probar conexión".';
@@ -3542,7 +3866,7 @@ function llenarAjustes() {
   $('#cfg-hoja').href = hojaUrl || '#'; $('#cfg-hoja').hidden = !hojaUrl;
   $('#cfg-prueba').textContent = ''; $('#cfg-prueba').className = 'prueba';
   $('#cel-qr').hidden = true; $('#cel-qr-btn').textContent = 'Mostrar código QR';
-  pintarCostosAjustes(); pintarComponentes(); llenarListas(); pintarAjustesEstado(); pintarAuto(true);
+  pintarCostosAjustes(); pintarPreciosAjustes(); pintarComponentes(); llenarListas(); pintarAjustesEstado(); pintarAuto(true);
   cargarCatalogo(false);
 }
 function pintarAjustesEstado() {
@@ -3587,7 +3911,7 @@ function ligarAjustes() {
     if (!nom || confirm('¿Quitar "' + nom + '" de la lista? Los pedidos que ya la usaron conservan su nombre.')) fila.remove();
   });
   ligarDinero($('#cos-empaque'));
-  ligarFichas();
+  ligarFichas(); ligarPrecios();
   $('#cos-guardar').addEventListener('click', guardarCostos);
   $('#cos-recalcular').addEventListener('click', recalcularCostos);
   ligarAuto();

@@ -19,7 +19,8 @@ function mensajeDe(e) {
 /* Conexión */
 function nombreVersion() {
   if (!S.cfg.url || !S.cfg.clave) return 'Aún no hay una hoja conectada en este dispositivo.';
-  if (S.version >= 4) return 'Script de la hoja: versión ' + S.version + '. Está al día, tienes todas las funciones.';
+  if (S.version >= 5) return 'Script de la hoja: versión ' + S.version + '. Está al día, tienes todas las funciones.';
+  if (S.version === 4) return 'Script de la hoja: versión 4. Todo funciona. La versión 5 agrega guardar en la hoja los porcentajes de la calculadora de precio y los minutos de trabajo de cada ficha (mientras tanto se guardan solo en este dispositivo).';
   if (S.version === 3) return 'Script de la hoja: versión 3. Todo lo anterior funciona, pero faltan las fichas de costo, el precio de la luz y los componentes (actualízalo con los pasos de abajo).';
   if (S.version === 2) return 'Script de la hoja: versión anterior. Los pedidos funcionan, pero faltan el calendario de Google, los costos, los gastos y el resumen por correo.';
   return 'Todavía no sé qué versión del script tiene tu hoja. Toca "Probar conexión".';
@@ -301,7 +302,7 @@ function llenarAjustes() {
   $('#cfg-hoja').href = hojaUrl || '#'; $('#cfg-hoja').hidden = !hojaUrl;
   $('#cfg-prueba').textContent = ''; $('#cfg-prueba').className = 'prueba';
   $('#cel-qr').hidden = true; $('#cel-qr-btn').textContent = 'Mostrar código QR';
-  pintarCostosAjustes(); pintarComponentes(); llenarListas(); pintarAjustesEstado(); pintarAuto(true);
+  pintarCostosAjustes(); pintarPreciosAjustes(); pintarComponentes(); llenarListas(); pintarAjustesEstado(); pintarAuto(true);
   cargarCatalogo(false);
 }
 function pintarAjustesEstado() {
@@ -346,7 +347,7 @@ function ligarAjustes() {
     if (!nom || confirm('¿Quitar "' + nom + '" de la lista? Los pedidos que ya la usaron conservan su nombre.')) fila.remove();
   });
   ligarDinero($('#cos-empaque'));
-  ligarFichas();
+  ligarFichas(); ligarPrecios();
   $('#cos-guardar').addEventListener('click', guardarCostos);
   $('#cos-recalcular').addEventListener('click', recalcularCostos);
   ligarAuto();

@@ -351,3 +351,12 @@ details .stack{padding-bottom:14px}
 .fl-pie{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .fl-st{font-size:13px;color:var(--amber);flex:1}
 .fl-st:empty{display:none}
+.fi-acc{display:flex;gap:8px;flex-shrink:0}
+@media (max-width:420px){.ficha-item{flex-direction:column;align-items:stretch}.fi-acc{justify-content:flex-start}}
+.pr-desglose{display:grid;gap:2px}
+.pr-lin{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:14px;color:var(--muted)}
+.pr-lin b{color:var(--text);text-align:right;white-space:nowrap;font-weight:700}
+.pr-lin.pr-sep{margin-top:8px;color:var(--text);font-weight:700}
+.pr-lin.pr-unidad{color:var(--text);font-size:15px;padding-bottom:8px}
+#dlg-precio .money input,#dlg-precio input,#dlg-precio select{min-width:0}
+#pr-res{position:sticky;bottom:-8px;z-index:2}

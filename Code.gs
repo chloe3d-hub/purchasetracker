@@ -1,5 +1,8 @@
 /*
-  Yi Shu Studio - Manager de la tienda (Google Apps Script) - versión 4
+  Yi Shu Studio - Manager de la tienda (Google Apps Script) - versión 5
+
+  Novedades de la versión 5: calculadora de precio (el margen, la merma, la comisión y el valor de tu hora se guardan en la pestaña
+  "Config") y los minutos de trabajo manual de cada ficha (columna nueva al final de la pestaña "Fichas", se agrega sola).
 
   Novedades de la versión 4: pestaña "Fichas" (horas, gramos y componentes de cada producto), precio de la luz,
   datos de cada impresora para calcular su costo por hora y lista de componentes (luces, conectores, switches).
@@ -28,7 +31,7 @@
   "(GMT-05:00) Bogotá" para que las entregas del calendario caigan en el día correcto.
 */
 
-const VERSION = 4;
+const VERSION = 5;
 const CLAVE = 'CAMBIA-ESTA-CLAVE';
 const NOMBRE_HOJA = 'Pedidos';
 const NOMBRE_GASTOS = 'Gastos';
@@ -116,7 +119,8 @@ const CAMPOS_FICHA = [
   { k: 'notas',          h: 'Notas' },
   { k: 'catalogoId',     h: 'ID en el catálogo' },
   { k: 'actualizado',    h: 'Actualizado' },
-  { k: 'componentes',    h: 'Componentes (uso interno)' }
+  { k: 'componentes',    h: 'Componentes (uso interno)' },
+  { k: 'minutos',        h: 'Minutos de trabajo por unidad' }
 ];
 const COLF = {};
 CAMPOS_FICHA.forEach(function (c, i) { COLF[c.k] = i + 1; });
@@ -132,6 +136,8 @@ const CONFIG_BASE = {
   luzKwh: 0,
   empaque: 0,
   componentes: [],
+  // Valores de partida de la calculadora de precio (propios:false = todavía no los ha confirmado Lorena).
+  precios: { margen: 40, merma: 10, comision: 0, horaTrabajo: 0, redondeo: 1000, propios: false },
   listas: {},
   gastoCategorias: ['Filamento', 'Empaques', 'Envíos', 'Publicidad', 'Repuestos y mantenimiento',
     'Electricidad', 'Equipos y herramientas', 'Componentes electrónicos', 'Otros'],
@@ -141,7 +147,7 @@ const CONFIG_BASE = {
   resumenEmail: '',
   respaldo: false
 };
-const CONFIG_EDITABLE = ['impresoras', 'costoGramo', 'luzKwh', 'empaque', 'componentes', 'listas', 'gastoCategorias'];
+const CONFIG_EDITABLE = ['impresoras', 'costoGramo', 'luzKwh', 'empaque', 'componentes', 'precios', 'listas', 'gastoCategorias'];
 
 /* Puntos de entrada */
 
@@ -598,6 +604,18 @@ function validarConfig_(k, v) {
     if (e < 0 || e > 100000000) throw new Error('El costo de empaque no es válido.');
     return e;
   }
+  if (k === 'precios') {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('Los ajustes de precio no son válidos.');
+    var margen = decimal_(v.margen, 1), merma = decimal_(v.merma, 1), comision = decimal_(v.comision, 2);
+    var horaTrabajo = Math.round(numero_(v.horaTrabajo)), redondeo = Math.round(numero_(v.redondeo));
+    if (margen < 0 || margen > 90) throw new Error('El margen debe estar entre 0 y 90 %.');
+    if (merma < 0 || merma > 50) throw new Error('La merma (impresiones que salen mal) debe estar entre 0 y 50 %.');
+    if (comision < 0 || comision > 30) throw new Error('La comisión de cobro debe estar entre 0 y 30 %.');
+    if (margen + comision > 95) throw new Error('El margen y la comisión no pueden sumar más de 95 %.');
+    if (horaTrabajo < 0 || horaTrabajo > 10000000) throw new Error('El valor de tu hora de trabajo no es válido.');
+    if ([0, 100, 500, 1000, 5000].indexOf(redondeo) < 0) throw new Error('El redondeo debe ser 0, 100, 500, 1.000 o 5.000.');
+    return { margen: margen, merma: merma, comision: comision, horaTrabajo: horaTrabajo, redondeo: redondeo, propios: true };
+  }
   if (k === 'gastoCategorias') {
     if (!Array.isArray(v) || v.length > 40) throw new Error('La lista de categorías de gastos no es válida (máximo 40).');
     var cats = [];
@@ -1009,13 +1027,21 @@ function fichasHoja_() {
     sh.getRange(2, COLF.horas, filas, 1).setNumberFormat('0.0#');
     sh.getRange(2, COLF.gramos, filas, 1).setNumberFormat('#,##0.#');
     sh.getRange(2, COLF.actualizado, filas, 1).setNumberFormat('dd/mm/yyyy hh:mm');
-    var anchos = { id: 80, nombre: 240, categoria: 160, impresora: 150, horas: 110, gramos: 110, componentesTxt: 260, notas: 240, catalogoId: 110, actualizado: 140 };
+    sh.getRange(2, COLF.minutos, filas, 1).setNumberFormat('0.#');
+    var anchos = { minutos: 130, id: 80, nombre: 240, categoria: 160, impresora: 150, horas: 110, gramos: 110, componentesTxt: 260, notas: 240, catalogoId: 110, actualizado: 140 };
     Object.keys(anchos).forEach(function (k) { sh.setColumnWidth(COLF[k], anchos[k]); });
     sh.hideColumns(COLF.componentes);
   } else {
     var enc = sh.getRange(1, 1, 1, Math.min(CAMPOS_FICHA.length, sh.getMaxColumns())).getValues()[0];
     if (enc[0] !== CAMPOS_FICHA[0].h || enc[COLF.componentes - 1] !== CAMPOS_FICHA[COLF.componentes - 1].h) {
       throw new Error('La pestaña "' + NOMBRE_FICHAS + '" ya existe con otras columnas. Renómbrala para que el manager pueda crear la suya.');
+    }
+    // Hojas creadas con la versión 4 todavía no tienen la columna de minutos: se agrega al final, sin tocar lo que ya hay.
+    asegurarColumnas_(sh, CAMPOS_FICHA.length);
+    if (String(sh.getRange(1, COLF.minutos).getValue()) !== CAMPOS_FICHA[COLF.minutos - 1].h) {
+      estiloEncabezado_(sh.getRange(1, COLF.minutos).setValue(CAMPOS_FICHA[COLF.minutos - 1].h));
+      sh.getRange(2, COLF.minutos, Math.max(sh.getMaxRows() - 1, 1), 1).setNumberFormat('0.#');
+      sh.setColumnWidth(COLF.minutos, 130);
     }
   }
   return sh;
@@ -1035,7 +1061,7 @@ function fichaAObjeto_(vals, fila) {
       o.componentes = lista.filter(function (x) { return x && x.nombre; }).map(function (x) {
         return { nombre: String(x.nombre), cantidad: numero_dec_(x.cantidad) > 0 ? numero_dec_(x.cantidad) : 1 };
       });
-    } else if (c.k === 'horas' || c.k === 'gramos') {
+    } else if (c.k === 'horas' || c.k === 'gramos' || c.k === 'minutos') {
       o[c.k] = (v === '' || v === null || v === undefined || isNaN(Number(v))) ? '' : Number(v);
     } else if (c.k === 'catalogoId') {
       var id = numero_(v);
@@ -1068,6 +1094,8 @@ function validarFicha_(f) {
   if (out.horas !== '' && (out.horas < 0 || out.horas > 1000)) throw new Error('Las horas de la ficha deben estar entre 0 y 1000.');
   out.gramos = (f.gramos === '' || f.gramos === null || f.gramos === undefined) ? '' : decimal_(f.gramos, 1);
   if (out.gramos !== '' && (out.gramos < 0 || out.gramos > 100000)) throw new Error('Los gramos de la ficha deben estar entre 0 y 100.000.');
+  out.minutos = (f.minutos === '' || f.minutos === null || f.minutos === undefined) ? '' : decimal_(f.minutos, 1);
+  if (out.minutos !== '' && (out.minutos < 0 || out.minutos > 6000)) throw new Error('Los minutos de trabajo de la ficha deben estar entre 0 y 6000.');
   var comps = Array.isArray(f.componentes) ? f.componentes : [];
   if (comps.length > 20) throw new Error('Una ficha puede tener máximo 20 componentes distintos.');
   var vistos = {};
@@ -1116,7 +1144,7 @@ function guardarFicha_(sh, req) {
   var valores = CAMPOS_FICHA.map(function () { return ''; });
   var poner = function (k, v) { valores[COLF[k] - 1] = v; };
   poner('id', id);
-  ['nombre', 'categoria', 'impresora', 'horas', 'gramos', 'notas', 'catalogoId'].forEach(function (k) { poner(k, datos[k]); });
+  ['nombre', 'categoria', 'impresora', 'horas', 'gramos', 'minutos', 'notas', 'catalogoId'].forEach(function (k) { poner(k, datos[k]); });
   poner('componentesTxt', datos.componentes.map(function (c) { return c.nombre + ' x' + c.cantidad; }).join(', '));
   poner('componentes', JSON.stringify(datos.componentes));
   poner('actualizado', ahora_());

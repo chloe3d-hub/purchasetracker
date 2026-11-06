@@ -236,6 +236,7 @@ function fichaDelFormulario() {
     id: FICHA.id, nombre: $('#f-nombre').value.trim(), categoria: $('#f-categoria').value.trim(), impresora: $('#f-impresora').value,
     horas: $('#f-horas').value.trim() === '' ? '' : decimalDe($('#f-horas').value),
     gramos: $('#f-gramos').value.trim() === '' ? '' : decimalDe($('#f-gramos').value),
+    minutos: $('#f-minutos').value.trim() === '' ? '' : decimalDe($('#f-minutos').value),
     componentes: leerCompsFicha().filter(function (c) { return c.nombre; }).map(function (c) { return { nombre: c.nombre, cantidad: c.cantidad > 0 ? c.cantidad : 1 }; }),
     notas: $('#f-notas').value.trim(), catalogoId: FICHA.catalogoId
   };
@@ -252,6 +253,8 @@ function pintarResumenFicha() {
   var av = avisosCosto(c, f);
   det.textContent = 'Filamento ' + dinero(c.filamento) + ' + impresora ' + dinero(c.impresora) + ' + componentes ' + dinero(c.componentes) + '.' +
     (av.length ? ' Ojo: ' + av.join('; ') + '. Eso cuenta como $0 hasta que lo llenes.' : '') + ' No incluye empaque ni envío.';
+  var pp = calcularPrecio(entradaDeFicha(f, 1), preciosGuardados());
+  if (!pp.error) det.textContent += ' Precio sugerido hoy: ' + dinero(pp.precio) + ' (con tus porcentajes de Ajustes > Precios y margen).';
 }
 function abrirFicha(datos) {
   datos = datos || {};
@@ -269,6 +272,8 @@ function abrirFicha(datos) {
   sel.value = src.impresora || '';
   $('#f-horas').value = src.horas === '' || src.horas == null ? '' : numTxt(src.horas);
   $('#f-gramos').value = src.gramos === '' || src.gramos == null ? '' : numTxt(src.gramos);
+  $('#f-minutos').value = src.minutos === '' || src.minutos == null ? '' : numTxt(src.minutos);
+  $('#f-minutos').disabled = !esV5(); $('#f-minutos-v4').hidden = esV5();
   $('#f-comps').innerHTML = '';
   (f ? f.componentes : []).forEach(function (c) { agregarFilaCompFicha(c.nombre, c.cantidad); });
   $('#f-comp-hint').textContent = (S.config.componentes || []).length ? '' : 'Todavía no tienes componentes. Créalos en Ajustes > Componentes y vuelve aquí.';
@@ -291,6 +296,7 @@ function onFicha(ev) {
   var otra = fichaPorNombre(f.nombre); if (otra && otra.id !== FICHA.id) msgs.push('Ya existe una ficha con ese nombre. Ábrela desde la lista y edítala en vez de crear otra.');
   if (!decimalOk($('#f-horas').value)) msgs.push('Horas: escribe solo el número, por ejemplo 3,5.');
   if (!decimalOk($('#f-gramos').value)) msgs.push('Gramos: escribe solo el número, por ejemplo 120.');
+  if (!decimalOk($('#f-minutos').value)) msgs.push('Minutos de trabajo: escribe solo el número, por ejemplo 30.');
   var vistos = {};
   leerCompsFicha().forEach(function (c) {
     if (!c.nombre) return;
@@ -321,16 +327,20 @@ function coincideBusqueda(txt, q) { return !q || String(txt).toLowerCase().index
 function itemFicha(f) {
   var c = costoFicha(f), av = avisosCosto(c, f);
   var partes = [];
+  var pp = (Number(f.horas) > 0 || Number(f.gramos) > 0 || (f.componentes || []).length) ? precioDeFicha(f) : null, cat = precioCatalogo(f);
   if (f.categoria) partes.push(f.categoria);
   if (f.impresora) partes.push(f.impresora);
   if (Number(f.horas) > 0) partes.push(numTxt(f.horas) + ' h');
   if (Number(f.gramos) > 0) partes.push(numTxt(f.gramos) + ' g');
+  if (Number(f.minutos) > 0) partes.push(numTxt(f.minutos) + ' min de trabajo');
   var comp = (f.componentes || []).map(function (x) { return x.nombre + (Number(x.cantidad) !== 1 ? ' ×' + numTxt(x.cantidad) : ''); }).join(', ');
   var vacio = !(Number(f.horas) > 0) && !(Number(f.gramos) > 0) && !(f.componentes || []).length;
   return '<div class="ficha-item"><div class="fi-txt"><b>' + esc(f.nombre) + '</b>' +
     '<span class="hint">' + (partes.length ? esc(partes.join(' · ')) : 'Sin datos todavía') + (comp ? ' · ' + esc(comp) : '') + '</span>' +
-    (vacio ? '' : '<span class="hint">Costo de una unidad hoy: <b>' + dinero(c.total) + '</b>' + (av.length ? ' (incompleto: ' + esc(av[0]) + ')' : '') + '</span>') + '</div>' +
-    '<button class="btn small ghost" type="button" data-ficha-editar="' + esc(f.id) + '">Editar</button></div>';
+    (vacio ? '' : '<span class="hint">Costo de una unidad hoy: <b>' + dinero(c.total) + '</b>' + (av.length ? ' (incompleto: ' + esc(av[0]) + ')' : '') + '</span>') +
+    (pp && !pp.error ? '<span class="hint">Precio sugerido hoy: <b>' + dinero(pp.precio) + '</b>' + (cat ? ' · en el catálogo ' + dinero(cat) : '') + (preciosGuardados().propios ? '' : ' · con porcentajes de partida') + '</span>' : '') + '</div>' +
+    '<div class="fi-acc">' + (vacio ? '' : '<button class="btn small" type="button" data-ficha-precio="' + esc(f.id) + '">Precio</button>') +
+    '<button class="btn small ghost" type="button" data-ficha-editar="' + esc(f.id) + '">Editar</button></div></div>';
 }
 /* Pedidos anteriores con un solo producto y con horas o gramos anotados: se promedian por unidad */
 function sugerenciasHistorial() {
@@ -458,7 +468,7 @@ function ligarFichas() {
   $('#f-eliminar').addEventListener('click', eliminarFichaActual);
   $('#f-nombre').addEventListener('input', onFichaNombre);
   $('#f-nombre').addEventListener('change', onFichaNombre);
-  ['f-horas', 'f-gramos'].forEach(function (id) { $('#' + id).addEventListener('input', pintarResumenFicha); });
+  ['f-horas', 'f-gramos', 'f-minutos'].forEach(function (id) { $('#' + id).addEventListener('input', pintarResumenFicha); });
   $('#f-impresora').addEventListener('change', pintarResumenFicha);
   $('#f-comp-add').addEventListener('click', function () { var fila = agregarFilaCompFicha(); $('.fc-sel', fila).focus(); pintarResumenFicha(); });
   $('#f-comps').addEventListener('change', pintarResumenFicha);

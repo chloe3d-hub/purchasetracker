@@ -100,6 +100,7 @@ __CSS__
               <label for="total">Valor total <span class="req">*</span></label>
               <div class="money"><input id="total" name="total" type="text" inputmode="numeric" autocomplete="off"></div>
               <p class="err" data-for="total"></p>
+              <button class="btn small ghost" id="btn-precio-nuevo" type="button">Calcular precio</button>
             </div>
             <div class="field">
               <label for="pago">Lo que ya pagó</label>
@@ -322,7 +323,7 @@ __CSS__
               <li>Elige la función autorizarPermisos, toca Ejecutar y acepta los permisos nuevos (calendario, correo y Drive).</li>
               <li>Implementar &gt; Administrar implementaciones &gt; el lápiz &gt; Versión: Nueva versión &gt; Implementar. La URL no cambia.</li>
               <li>En Configuración del proyecto (la rueda dentada) deja la zona horaria en Bogotá.</li>
-              <li>Vuelve aquí, toca Probar conexión y debe decir versión 4.</li>
+              <li>Vuelve aquí, toca Probar conexión y debe decir versión 5.</li>
             </ol>
           </div>
         </details>
@@ -428,6 +429,20 @@ __CSS__
         </details>
         <details id="fichas-hist-det"><summary>Sugerencias de tus pedidos anteriores <span id="fichas-hist-n" class="opc"></span></summary><div class="stack" id="fichas-hist"></div></details>
         <details id="fichas-sin-det"><summary>Productos del catálogo sin ficha <span id="fichas-sin-n" class="opc"></span></summary><div class="stack" id="fichas-sin"></div></details>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Precios y margen</h2>
+      <div class="stack">
+        <p class="hint">La calculadora toma el costo real (filamento, impresora, impresiones que salen mal, componentes, tu trabajo, empaque y envío) y lo divide entre 1 menos el margen y la comisión. Así el margen es de verdad lo que te queda de cada venta. Los números de abajo son una sugerencia mía para empezar: tú decides los tuyos.</p>
+        <div class="aviso" id="pa-v4" hidden><span><strong>Con tu script actual estos valores se guardan solo en este dispositivo.</strong> Para compartirlos con tu socia, actualiza el script a la versión 5.</span></div>
+        <div id="pa-cont" class="stack"></div>
+        <p class="hint" id="pa-estado" role="status"></p>
+        <div class="acciones">
+          <button class="btn primary" id="pa-guardar" type="button">Guardar</button>
+          <button class="btn small" id="pa-abrir" type="button">Abrir la calculadora</button>
+        </div>
       </div>
     </div>
 
@@ -570,7 +585,7 @@ __CSS__
     <div class="field"><label for="ed-producto">Producto (si hay varios, sepáralos con " + ")</label><input id="ed-producto" type="text" autocomplete="off" maxlength="160"></div>
     <div class="grid2">
       <div class="field"><label for="ed-cantidad">Cantidad</label><input id="ed-cantidad" type="number" min="1" max="999" inputmode="numeric"></div>
-      <div class="field"><label for="ed-total">Valor total</label><div class="money"><input id="ed-total" type="text" inputmode="numeric" autocomplete="off"></div></div>
+      <div class="field"><label for="ed-total">Valor total</label><div class="money"><input id="ed-total" type="text" inputmode="numeric" autocomplete="off"></div><button class="btn small ghost" id="btn-precio-editar" type="button">Calcular precio</button></div>
     </div>
     <p class="hint" id="ed-pago-nota"></p>
     <div class="field"><label for="ed-detalles">Detalles (color, tamaño, personalización)</label><textarea id="ed-detalles" rows="2" maxlength="600"></textarea></div>
@@ -656,6 +671,12 @@ __CSS__
       <div class="field"><label for="f-gramos">Gramos por unidad</label><input id="f-gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>
     </div>
     <div class="field">
+      <label for="f-minutos">Minutos de tu trabajo por unidad</label>
+      <input id="f-minutos" type="text" inputmode="decimal" placeholder="Ej: 30" autocomplete="off">
+      <p class="hint">Lijar, pintar, armar, empacar. Se usa solo en la calculadora de precio.</p>
+      <p class="hint" id="f-minutos-v4" hidden>Para guardar este dato en cada ficha hay que actualizar el script (versión 5).</p>
+    </div>
+    <div class="field">
       <span class="lbl">Componentes que lleva cada unidad</span>
       <div id="f-comps" class="stack"></div>
       <div class="acciones"><button type="button" class="btn small" id="f-comp-add">+ Agregar componente</button></div>
@@ -671,6 +692,46 @@ __CSS__
       <button class="btn ghost peligro" id="f-eliminar" type="button" hidden>Borrar ficha</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="dlg-precio" aria-labelledby="precio-titulo">
+  <h2 id="precio-titulo">Calculadora de precio</h2>
+  <p class="sub">Un estimado con tus costos de hoy. Es una guía: el precio final lo decides tú.</p>
+  <div class="stack">
+    <div class="field" id="pr-ficha-box">
+      <label for="pr-ficha">Rellenar con una ficha</label>
+      <select id="pr-ficha"></select>
+    </div>
+    <div class="field"><label for="pr-impresora">Impresora</label><select id="pr-impresora"></select></div>
+    <div class="grid2">
+      <div class="field"><label for="pr-cant">Unidades</label><input id="pr-cant" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></div>
+      <div class="field"><label for="pr-horas">Horas de impresión</label><input id="pr-horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" autocomplete="off"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="pr-gramos">Gramos de filamento</label><input id="pr-gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>
+      <div class="field"><label for="pr-minutos">Tu trabajo (minutos)</label><input id="pr-minutos" type="text" inputmode="decimal" placeholder="Ej: 30" autocomplete="off"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="pr-comps">Componentes y otros materiales</label><div class="money"><input id="pr-comps" type="text" inputmode="numeric" autocomplete="off"></div></div>
+      <div class="field"><label for="pr-empaque">Empaque</label><div class="money"><input id="pr-empaque" type="text" inputmode="numeric" autocomplete="off"></div></div>
+    </div>
+    <div class="field"><label for="pr-envio">Envío que paga el negocio</label><div class="money"><input id="pr-envio" type="text" inputmode="numeric" autocomplete="off"></div></div>
+    <details id="pr-params">
+      <summary>Margen y porcentajes de este cálculo</summary>
+      <div class="stack">
+        <div id="pq-cont" class="stack"></div>
+        <p class="hint">Los cambios de aquí valen solo para este cálculo. Para dejarlos fijos, toca el botón.</p>
+        <div class="acciones"><button class="btn small" id="pq-guardar" type="button">Guardar como mis valores</button></div>
+      </div>
+    </details>
+    <div class="saldo" id="pr-res" data-estado="vacio" aria-live="polite"><span class="t">Precio sugerido</span><span class="v">&mdash;</span></div>
+    <div id="pr-desglose" class="pr-desglose"></div>
+    <p class="hint" id="pr-nota" role="status"></p>
+    <div class="acciones-dlg">
+      <button class="btn primary" id="pr-usar" type="button" hidden>Usar como valor total</button>
+      <button class="btn ghost" id="pr-cerrar" type="button">Cerrar</button>
+    </div>
+  </div>
 </dialog>
 
 <noscript><div class="wrap"><p class="aviso">Esta app necesita JavaScript activado para funcionar.</p></div></noscript>
