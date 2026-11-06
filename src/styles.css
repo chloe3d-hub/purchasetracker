@@ -189,7 +189,7 @@ details .stack{padding-bottom:14px}
 
 /* Menú de abajo */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(11,11,12,.96);backdrop-filter:blur(12px);padding-bottom:env(safe-area-inset-bottom)}
-.nav .wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
+.nav .wrap{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px}
 .nav button{position:relative;height:var(--nav);border:0;background:transparent;color:var(--muted);cursor:pointer;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:800;border-radius:14px}
 .nav button svg{width:24px;height:24px}
@@ -360,3 +360,21 @@ details .stack{padding-bottom:14px}
 .pr-lin.pr-unidad{color:var(--text);font-size:15px;padding-bottom:8px}
 #dlg-precio .money input,#dlg-precio input,#dlg-precio select{min-width:0}
 #pr-res{position:sticky;bottom:-8px;z-index:2}
+
+/* Inicio */
+.ini-acc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.ini-acc .btn{min-height:56px;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.ini-n{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:var(--red);color:#0b0b0c;font-size:13px}
+.ini-sub{margin:-8px 0 14px}
+.ini-pie{margin-top:14px}
+#ci-faltan{margin-bottom:14px}
+#ci-res{position:sticky;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 10px);z-index:2;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.ent-fila{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0}
+.ent-t{min-width:0}
+.ent-t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ent-t span{display:block;color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ent-d{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+@media (max-width:400px){.nav button{font-size:10px;letter-spacing:-.02em;min-width:0}.nav .wrap{padding:0 4px}}
+@media (max-width:340px){.nav button{font-size:9px}}
+@media (max-width:420px){.brand h1{font-size:24px;white-space:nowrap}.brand img{width:40px;height:40px}.brand{gap:10px}}
+@media (max-width:350px){.status #conexion-txt{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}.status{padding:0 11px}}

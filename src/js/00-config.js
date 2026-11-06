@@ -6,7 +6,7 @@ var CONFIG = {
   URL_HOJA: ''
 };
 
-var APP_VERSION = '5.0';
+var APP_VERSION = '5.1';
 var URL_PUBLICA = 'https://chloe3d-hub.github.io/purchasetracker/';
 /* Lista de productos del catálogo web (mismo sitio de GitHub Pages). Solo sirve para sugerir nombres al crear fichas. */
 var CATALOGO_URL = 'https://chloe3d-hub.github.io/Catalogo/data/products.json';

@@ -1,7 +1,7 @@
 /* Service worker de Yi Shu Manager.
    Primero intenta traer la versión más nueva de internet; si no hay conexión, usa la última copia guardada.
    Solo toca archivos de esta misma página: nunca intercepta las llamadas a Google. */
-var CACHE = 'ys-app-v5';
+var CACHE = 'ys-app-v5-1';
 var BASICOS = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

@@ -8,7 +8,10 @@
 
 var PRECIOS_BASE = { margen: 40, merma: 10, comision: 0, horaTrabajo: 0, redondeo: 1000, propios: false };
 var REDONDEOS = [[0, 'Sin redondear'], [100, 'A los $100'], [500, 'A los $500'], [1000, 'A los $1.000'], [5000, 'A los $5.000']];
-var PR = { destino: '', fichaId: '' };           // destino: casilla del pedido donde "Usar como valor total" deja el precio
+/* Hay dos calculadoras con la misma lógica: la del Inicio ('ci-') y el cuadro que se abre desde un pedido ('pr-'),
+   que además puede dejar el precio en la casilla "Valor total". Cada una tiene su prefijo y el de sus porcentajes. */
+var CALC_Q = { 'pr-': 'pq-', 'ci-': 'cq-' };
+var PR = { 'pr-': { destino: '' }, 'ci-': { destino: '' } };
 
 function esV5() { return S.version >= 5; }
 
@@ -37,7 +40,10 @@ function calcularPrecio(e, pr) {
   if (gramos > 0 && !(cg > 0)) r.avisos.push('falta el costo por gramo (Ajustes > Costos de impresión)');
   if (horas > 0 && !(ph > 0)) r.avisos.push(e.impresora ? 'falta el costo por hora de ' + e.impresora : 'falta elegir la impresora');
   if ((Number(e.minutos) || 0) > 0 && !(Number(pr.horaTrabajo) > 0)) r.avisos.push('tu trabajo cuenta como $0 porque falta el valor de tu hora');
-  if (!(costo > 0)) { r.error = 'Escribe las horas, los gramos u otros costos para ver el precio.'; return r; }
+  /* Sin horas, gramos, componentes ni trabajo no hay nada que cobrar: el empaque que viene puesto solo no es un producto */
+  var hayEntrada = gramos > 0 || horas > 0 || comps > 0 || (Number(e.minutos) || 0) > 0;
+  if (!hayEntrada) { r.error = 'Escribe las horas y los gramos (o elige un producto) para ver el precio.'; return r; }
+  if (!(costo > 0)) { r.error = 'Todavía no puedo calcular: ' + (r.avisos.length ? r.avisos.join('; ') : 'faltan costos') + '.'; return r; }
   if (divisor < 0.05) { r.error = 'El margen y la comisión suman demasiado: no alcanza para calcular.'; return r; }
   var crudo = costo / divisor, paso = Number(pr.redondeo) || 0;
   r.precio = paso > 0 ? Math.ceil(crudo / paso - 1e-9) * paso : Math.round(crudo);
@@ -108,7 +114,10 @@ function guardarPreciosDe(p, btn) {
 }
 function afterPrecios() {
   if (S.vista === 'ajustes') { pintarPreciosAjustes(); pintarFichas(); }
-  if ($('#dlg-precio').open) { ponerParamsPrecio('pq-', preciosGuardados()); recalcularPrecio(); }
+  Object.keys(CALC_Q).forEach(function (p) {
+    var q = CALC_Q[p], c = $('#' + q + 'cont'); if (!c) return;
+    delete c.dataset.tocado; ponerParamsPrecio(q, preciosGuardados()); recalcularPrecio(p);
+  });
 }
 
 /* ---------- Ajustes > Precios y margen ---------- */
@@ -125,35 +134,84 @@ function pintarPreciosAjustes() {
 /* ---------- La calculadora ---------- */
 function dineroDe(id) { return soloNumero($('#' + id).value); }
 function decDe(id) { var t = $('#' + id).value.trim(); return t === '' ? 0 : decimalDe(t); }
-function opcionesFichasPrecio() {
-  var sel = $('#pr-ficha'), previo = sel.value;
+function campoDinero(id, etiqueta) {
+  return '<div class="field"><label for="' + id + '">' + etiqueta + '</label><div class="money"><input id="' + id + '" type="text" inputmode="numeric" autocomplete="off"></div></div>';
+}
+/* El mismo formulario sirve para el Inicio (p = 'ci-') y para el cuadro que se abre desde un pedido (p = 'pr-') */
+function htmlCalculadora(p) {
+  var q = CALC_Q[p], inicio = p === 'ci-';
+  var otros = '<div class="grid2">' + campoDinero(p + 'comps', 'Componentes y otros materiales') + campoDinero(p + 'empaque', 'Empaque') + '</div>' +
+    campoDinero(p + 'envio', 'Envío que paga el negocio');
+  return (inicio ? '<p class="hint" id="ci-ficha-hint" hidden>Todavía no tienes productos guardados. Escribe los números abajo, o guarda tus productos como fichas en Ajustes para no repetirlos cada vez.</p>' : '') +
+    '<div class="field" id="' + p + 'ficha-box"><label for="' + p + 'ficha">' + (inicio ? '¿Qué vas a vender?' : 'Rellenar con una ficha') + '</label><select id="' + p + 'ficha"></select></div>' +
+    '<div class="field"><label for="' + p + 'impresora">Impresora</label><select id="' + p + 'impresora"></select></div>' +
+    '<div class="grid2">' +
+      '<div class="field"><label for="' + p + 'cant">Unidades</label><input id="' + p + 'cant" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></div>' +
+      '<div class="field"><label for="' + p + 'horas">Horas de impresión</label><input id="' + p + 'horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" autocomplete="off"></div>' +
+    '</div>' +
+    '<div class="grid2">' +
+      '<div class="field"><label for="' + p + 'gramos">Gramos de filamento</label><input id="' + p + 'gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>' +
+      '<div class="field"><label for="' + p + 'minutos">Tu trabajo (minutos)</label><input id="' + p + 'minutos" type="text" inputmode="decimal" placeholder="Ej: 30" autocomplete="off"></div>' +
+    '</div>' +
+    (inicio ? '<details id="ci-otros"><summary>Componentes, empaque y envío <span class="opc">(opcional)</span></summary><div class="stack">' +
+      '<p class="hint">El empaque ya viene sumado con lo que pusiste en Ajustes. Cámbialo si este pedido lleva otro.</p>' + otros + '</div></details>' : otros) +
+    '<details id="' + p + 'params"><summary>Margen y porcentajes de este cálculo</summary><div class="stack">' +
+      '<div id="' + q + 'cont" class="stack"></div>' +
+      '<p class="hint">Los cambios de aquí valen solo para este cálculo. Para dejarlos fijos, toca el botón.</p>' +
+      '<div class="acciones"><button class="btn small" id="' + q + 'guardar" type="button">Guardar como mis valores</button></div>' +
+    '</div></details>' +
+    '<div class="saldo" id="' + p + 'res" data-estado="vacio" aria-live="polite"><span class="t">Precio sugerido</span><span class="v">&mdash;</span></div>' +
+    '<div id="' + p + 'desglose" class="pr-desglose"></div>' +
+    '<p class="hint" id="' + p + 'nota" role="status"></p>';
+}
+
+function opcionesFichasPrecio(p) {
+  var sel = $('#' + p + 'ficha'), previo = sel.value, inicio = p === 'ci-';
   var fs = S.fichas.slice().sort(function (a, b) { return String(a.nombre).localeCompare(String(b.nombre), 'es'); });
-  sel.innerHTML = '<option value="">Ninguna: escribo los números</option>' + fs.map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; }).join('');
+  var html = '<option value="">' + (inicio ? 'Otro producto: escribo los números' : 'Ninguna: escribo los números') + '</option>' +
+    fs.map(function (f) { return '<option value="' + esc(f.id) + '">' + esc(f.nombre) + '</option>'; }).join('');
+  if (sel.innerHTML !== html) sel.innerHTML = html;           // no lo reescribas si no cambió: cerraría la lista abierta
   sel.value = previo && buscarFicha(previo) ? previo : '';
-  $('#pr-ficha-box').hidden = !fs.length;
+  $('#' + p + 'ficha-box').hidden = !fs.length;
+  if (inicio) $('#ci-ficha-hint').hidden = !!fs.length || !esV4();
 }
-function llenarDesdeFicha() {
-  var f = $('#pr-ficha').value ? buscarFicha($('#pr-ficha').value) : null; if (!f) return;
-  var cant = Math.max(1, parseInt($('#pr-cant').value, 10) || 1), e = entradaDeFicha(f, cant);
-  pintarImpresoras('pr-', f.impresora || '');
-  $('#pr-horas').value = e.horas > 0 ? numTxt(e.horas) : ''; $('#pr-gramos').value = e.gramos > 0 ? numTxt(e.gramos) : '';
-  ponerDinero($('#pr-comps'), Math.round(e.componentes)); $('#pr-minutos').value = e.minutos > 0 ? numTxt(e.minutos) : '';
+/* La impresora que más has usado en tus pedidos; si no hay datos, la primera que ya tiene costo por hora */
+function impresoraHabitual() {
+  var conCosto = (S.config.impresoras || []).filter(function (i) { return Number(i.costoHora) > 0; }).map(function (i) { return i.nombre; });
+  var cuenta = {}, mejor = '', n = 0;
+  S.cache.forEach(function (x) {
+    if (x.impresora && conCosto.indexOf(x.impresora) >= 0) { cuenta[x.impresora] = (cuenta[x.impresora] || 0) + 1; if (cuenta[x.impresora] > n) { n = cuenta[x.impresora]; mejor = x.impresora; } }
+  });
+  return mejor || conCosto[0] || '';
 }
-function entradaDeCalculadora() {
-  return { impresora: $('#pr-impresora').value, horas: decDe('pr-horas'), gramos: decDe('pr-gramos'), componentes: dineroDe('pr-comps'),
-    minutos: decDe('pr-minutos'), empaque: dineroDe('pr-empaque'), envio: dineroDe('pr-envio') };
+function empaqueSugerido(p) { return Math.round((Number(S.config.empaque) || 0) * Math.max(1, parseInt($('#' + p + 'cant').value, 10) || 1)); }
+function faltanCostos() {
+  return !(Number(S.config.costoGramo) > 0) || !(S.config.impresoras || []).some(function (i) { return Number(i.costoHora) > 0; });
+}
+
+function llenarDesdeFicha(p) {
+  var f = $('#' + p + 'ficha').value ? buscarFicha($('#' + p + 'ficha').value) : null; if (!f) return;
+  var cant = Math.max(1, parseInt($('#' + p + 'cant').value, 10) || 1), e = entradaDeFicha(f, cant);
+  pintarImpresoras(p, f.impresora || (p === 'ci-' ? impresoraHabitual() : ''));
+  $('#' + p + 'horas').value = e.horas > 0 ? numTxt(e.horas) : ''; $('#' + p + 'gramos').value = e.gramos > 0 ? numTxt(e.gramos) : '';
+  ponerDinero($('#' + p + 'comps'), Math.round(e.componentes)); $('#' + p + 'minutos').value = e.minutos > 0 ? numTxt(e.minutos) : '';
+}
+function entradaDeCalculadora(p) {
+  return { impresora: $('#' + p + 'impresora').value, horas: decDe(p + 'horas'), gramos: decDe(p + 'gramos'), componentes: dineroDe(p + 'comps'),
+    minutos: decDe(p + 'minutos'), empaque: dineroDe(p + 'empaque'), envio: dineroDe(p + 'envio') };
 }
 function lineaDesglose(txt, valor) { return '<div class="pr-lin"><span>' + esc(txt) + '</span><b>' + dinero(valor) + '</b></div>'; }
-function recalcularPrecio() {
-  var pr = leerParamsPrecio('pq-'), box = $('#pr-res'), det = $('#pr-desglose'), nota = $('#pr-nota'), usar = $('#pr-usar');
-  var err = errorParamsPrecio('pq-', pr);
-  var e = entradaDeCalculadora(), r = calcularPrecio(e, pr), cant = Math.max(1, parseInt($('#pr-cant').value, 10) || 1);
-  usar.hidden = !PR.destino; usar.disabled = true;
+function recalcularPrecio(p) {
+  var q = CALC_Q[p], box = $('#' + p + 'res'); if (!box) return;
+  var det = $('#' + p + 'desglose'), nota = $('#' + p + 'nota'), usar = $('#' + p + 'usar');
+  var pr = leerParamsPrecio(q), err = errorParamsPrecio(q, pr);
+  var e = entradaDeCalculadora(p), r = calcularPrecio(e, pr), cant = Math.max(1, parseInt($('#' + p + 'cant').value, 10) || 1);
+  if (usar) { usar.hidden = !PR[p].destino; usar.disabled = true; }
   if (err) { box.setAttribute('data-estado', 'vacio'); $('.v', box).textContent = '—'; det.innerHTML = ''; nota.textContent = err; return; }
   if (r.error) { box.setAttribute('data-estado', 'vacio'); $('.v', box).textContent = '—'; det.innerHTML = ''; nota.textContent = r.error; return; }
   box.setAttribute('data-estado', 'pagado'); $('.v', box).textContent = dinero(r.precio);
-  usar.disabled = false;
-  var f = $('#pr-ficha').value ? buscarFicha($('#pr-ficha').value) : null, cat = f ? precioCatalogo(f) : 0;
+  if (usar) usar.disabled = false;
+  var f = $('#' + p + 'ficha').value ? buscarFicha($('#' + p + 'ficha').value) : null, cat = f ? precioCatalogo(f) : 0;
   var lin = [];
   if (cant > 1) lin.push('<div class="pr-lin pr-unidad"><span>Por unidad (' + cant + ' unidades)</span><b>' + dinero(Math.ceil(r.precio / cant)) + '</b></div>');
   lin.push(lineaDesglose('Filamento', r.filamento), lineaDesglose('Impresora (luz, desgaste y mantenimiento)', r.impresora));
@@ -172,26 +230,29 @@ function recalcularPrecio() {
   }
   det.innerHTML = lin.join('');
   nota.textContent = (r.avisos.length ? 'Ojo: ' + r.avisos.join('; ') + '. ' : '') +
-    (preciosGuardados().propios ? '' : 'Los porcentajes son valores de partida: ajústalos y guárdalos en Ajustes > Precios y margen. ') +
+    (preciosGuardados().propios ? '' : 'Los porcentajes son valores de partida: ajústalos en "Margen y porcentajes" y toca "Guardar como mis valores". ') +
     'El pedido solo registra como costo lo de impresión, componentes, empaque y envío: la merma y tu trabajo quedan dentro de la ganancia.';
 }
+
+/* Cuadro que se abre desde "Nuevo pedido" o "Editar" (puede dejar el precio en el valor total) */
 function abrirPrecio(o) {
   o = o || {};
-  PR = { destino: o.destino || '', fichaId: '' };
-  opcionesFichasPrecio();
+  var p = 'pr-', q = 'pq-';
+  PR[p] = { destino: o.destino || '' };
+  opcionesFichasPrecio(p);
   $('#pr-ficha').value = o.fichaId && buscarFicha(o.fichaId) ? o.fichaId : '';
   $('#pr-cant').value = String(Math.max(1, parseInt(o.cant, 10) || 1));
   var d = o.datos || {};
-  pintarImpresoras('pr-', d.impresora || '');
+  pintarImpresoras(p, d.impresora || '');
   $('#pr-horas').value = d.horas > 0 ? numTxt(d.horas) : ''; $('#pr-gramos').value = d.gramos > 0 ? numTxt(d.gramos) : '';
   ponerDinero($('#pr-comps'), Number(d.otros) || 0); $('#pr-minutos').value = d.minutos > 0 ? numTxt(d.minutos) : '';
-  var emp = d.empaque === undefined ? Math.round((Number(S.config.empaque) || 0) * Math.max(1, parseInt($('#pr-cant').value, 10) || 1)) : (Number(d.empaque) || 0);
+  var emp = d.empaque === undefined ? empaqueSugerido(p) : (Number(d.empaque) || 0);
   ponerDinero($('#pr-empaque'), emp); $('#pr-empaque').dataset.tocado = d.empaque === undefined ? '' : '1'; ponerDinero($('#pr-envio'), Number(d.envio) || 0);
-  if ($('#pr-ficha').value && !(o.datos)) llenarDesdeFicha();
-  ponerParamsPrecio('pq-', preciosGuardados());
+  if ($('#pr-ficha').value && !(o.datos)) llenarDesdeFicha(p);
+  ponerParamsPrecio(q, preciosGuardados());
   $('#pr-params').open = false;
-  $('#pr-usar').hidden = !PR.destino;
-  recalcularPrecio();
+  $('#pr-usar').hidden = !PR[p].destino;
+  recalcularPrecio(p);
   abrir($('#dlg-precio'));
 }
 
@@ -209,37 +270,78 @@ function abrirPrecioDesdePedido(p) {
       empaque: Number(c.empaque) || 0, envio: Number(c.envioNegocio) || 0 } });
 }
 function usarPrecioComoTotal() {
-  var pr = leerParamsPrecio('pq-'), r = calcularPrecio(entradaDeCalculadora(), pr);
+  var p = 'pr-', pr = leerParamsPrecio(CALC_Q[p]), r = calcularPrecio(entradaDeCalculadora(p), pr);
   if (!(r.precio > 0)) return;
-  var el = $('#' + PR.destino); if (!el) return;
+  var el = $('#' + PR[p].destino); if (!el) return;
   ponerDinero(el, r.precio);
   try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (e) {}
   cerrar($('#dlg-precio')); toast('Valor total puesto en ' + dinero(r.precio) + '. Lo puedes cambiar.');
 }
 
+/* ---------- La calculadora del Inicio ---------- */
+/* Se llama al entrar al Inicio y cada vez que llegan datos nuevos de la hoja. No pisa lo que ya escribiste. */
+function pintarCalcInicio() {
+  var p = 'ci-', q = 'cq-'; if (!$('#ci-res')) return;
+  opcionesFichasPrecio(p);
+  var imp = $('#ci-impresora');
+  if (!imp.value && !imp.dataset.tocado) pintarImpresoras(p, impresoraHabitual()); else pintarImpresoras(p);
+  var par = $('#cq-cont'); if (!par.dataset.tocado) ponerParamsPrecio(q, preciosGuardados());
+  var emp = $('#ci-empaque'); if (!emp.dataset.tocado) ponerDinero(emp, empaqueSugerido(p));
+  $('#ci-faltan').hidden = !esV4() || !S.cfg.url || !faltanCostos();
+  recalcularPrecio(p);
+}
+function limpiarCalcInicio() {
+  ['ci-horas', 'ci-gramos', 'ci-minutos', 'ci-comps', 'ci-envio'].forEach(function (id) { $('#' + id).value = ''; });
+  $('#ci-ficha').value = ''; $('#ci-cant').value = '1'; $('#ci-impresora').value = '';
+  delete $('#ci-empaque').dataset.tocado; delete $('#ci-impresora').dataset.tocado; delete $('#cq-cont').dataset.tocado;
+  $('#ci-otros').open = false; $('#ci-params').open = false;
+  pintarCalcInicio();
+}
+/* Llevar a alguien a la calculadora, con un producto ya elegido si hace falta (desde Ajustes > Fichas) */
+function irACalculadora(o) {
+  o = o || {};
+  irA('inicio');
+  if (o.fichaId && buscarFicha(o.fichaId)) {
+    limpiarCalcInicio();
+    $('#ci-ficha').value = o.fichaId; llenarDesdeFicha('ci-'); recalcularPrecio('ci-');
+  }
+  var c = $('#calc-card'); if (c) c.scrollIntoView({ block: 'start' });
+}
+
+function ligarCalc(p) {
+  var q = CALC_Q[p], recalc = function () { recalcularPrecio(p); };
+  $('#' + p + 'cont').innerHTML = htmlCalculadora(p);
+  $('#' + q + 'cont').innerHTML = htmlParamsPrecio(q);
+  ligarDinero($('#' + q + 'hora'), recalc);
+  [p + 'comps', p + 'envio'].forEach(function (id) { ligarDinero($('#' + id), recalc); });
+  ligarDinero($('#' + p + 'empaque'), function () { $('#' + p + 'empaque').dataset.tocado = '1'; recalc(); });
+  var par = $('#' + q + 'cont');
+  var marcar = function () { par.dataset.tocado = '1'; recalc(); };
+  par.addEventListener('input', marcar); par.addEventListener('change', marcar);
+  [p + 'horas', p + 'gramos', p + 'minutos'].forEach(function (id) { $('#' + id).addEventListener('input', recalc); });
+  $('#' + p + 'impresora').addEventListener('change', function () { this.dataset.tocado = '1'; recalc(); });
+  $('#' + p + 'ficha').addEventListener('change', function () { llenarDesdeFicha(p); recalc(); });
+  $('#' + p + 'cant').addEventListener('input', function () {
+    if (!$('#' + p + 'empaque').dataset.tocado) ponerDinero($('#' + p + 'empaque'), empaqueSugerido(p));
+    llenarDesdeFicha(p); recalc();
+  });
+  $('#' + q + 'guardar').addEventListener('click', function () { guardarPreciosDe(q, this); });
+}
+
 function ligarPrecios() {
   $('#pa-cont').innerHTML = htmlParamsPrecio('pa-');
-  $('#pq-cont').innerHTML = htmlParamsPrecio('pq-');
-  ['pa-', 'pq-'].forEach(function (p) { ligarDinero($('#' + p + 'hora'), p === 'pq-' ? recalcularPrecio : null); });
-  ['pr-comps', 'pr-envio'].forEach(function (id) { ligarDinero($('#' + id), recalcularPrecio); });
-  ligarDinero($('#pr-empaque'), function () { $('#pr-empaque').dataset.tocado = '1'; recalcularPrecio(); });
-  $('#pq-cont').addEventListener('input', recalcularPrecio); $('#pq-cont').addEventListener('change', recalcularPrecio);
-  ['pr-horas', 'pr-gramos', 'pr-minutos'].forEach(function (id) { $('#' + id).addEventListener('input', recalcularPrecio); });
-  $('#pr-impresora').addEventListener('change', recalcularPrecio);
-  $('#pr-ficha').addEventListener('change', function () { llenarDesdeFicha(); recalcularPrecio(); });
-  $('#pr-cant').addEventListener('input', function () {
-    if (!$('#pr-empaque').dataset.tocado) ponerDinero($('#pr-empaque'), Math.round((Number(S.config.empaque) || 0) * Math.max(1, parseInt($('#pr-cant').value, 10) || 1)));
-    llenarDesdeFicha(); recalcularPrecio();
-  });
+  ligarDinero($('#pa-hora'));
+  ligarCalc('pr-'); ligarCalc('ci-');
   $('#pr-cerrar').addEventListener('click', function () { cerrar($('#dlg-precio')); });
   $('#pr-usar').addEventListener('click', usarPrecioComoTotal);
-  $('#pq-guardar').addEventListener('click', function () { guardarPreciosDe('pq-', this); });
   $('#pa-guardar').addEventListener('click', function () { guardarPreciosDe('pa-', this); });
-  $('#pa-abrir').addEventListener('click', function () { abrirPrecio({}); });
+  $('#pa-abrir').addEventListener('click', function () { irACalculadora({}); });
   $('#btn-precio-nuevo').addEventListener('click', function () { abrirPrecioDesdePedido('c-'); });
   $('#btn-precio-editar').addEventListener('click', function () { abrirPrecioDesdePedido('ed-c-'); });
+  $('#ci-limpiar').addEventListener('click', limpiarCalcInicio);
+  $('#ci-completar').addEventListener('click', function () { irA('ajustes'); var c = $('#cos-gramo'); if (c) c.scrollIntoView({ block: 'center' }); });
   $('#fichas-lista').addEventListener('click', function (ev) {
-    var b = ev.target.closest('[data-ficha-precio]'); if (b) abrirPrecio({ fichaId: b.dataset.fichaPrecio });
+    var b = ev.target.closest('[data-ficha-precio]'); if (b) irACalculadora({ fichaId: b.dataset.fichaPrecio });
   });
   pintarPreciosAjustes();
 }

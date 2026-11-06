@@ -1,5 +1,5 @@
 /* Pantallas, arranque y eventos */
-var VISTAS = ['nuevo', 'pedidos', 'calendario', 'produccion', 'numeros', 'ajustes'];
+var VISTAS = ['inicio', 'nuevo', 'pedidos', 'calendario', 'produccion', 'numeros', 'ajustes'];
 
 function renderTodo() {
   var enCurso = S.cache.filter(esActivo).length + S.pend.length, cola = colaProduccion().length;
@@ -9,7 +9,7 @@ function renderTodo() {
   var bc = $('#bloque-costos-nuevo'); if (bc) bc.hidden = !esV3();
   var f = document.activeElement;
   if (S.vista === 'produccion' && f && f.matches && f.matches('[data-prod], [data-prod-ficha]')) return;   // no pisar lo que está escribiendo
-  var pinta = { pedidos: renderPedidos, calendario: renderCalendario, produccion: renderProduccion, numeros: renderNumeros, ajustes: pintarAjustesEstado }[S.vista];
+  var pinta = { inicio: function () { pintarInicio(); pintarCalcInicio(); }, pedidos: renderPedidos, calendario: renderCalendario, produccion: renderProduccion, numeros: renderNumeros, ajustes: pintarAjustesEstado }[S.vista];
   if (pinta) pinta();
 }
 function refrescarSiViejo(minimoMs) {
@@ -18,7 +18,7 @@ function refrescarSiViejo(minimoMs) {
   return sincronizar(true);
 }
 function irA(vista) {
-  if (VISTAS.indexOf(vista) < 0) vista = 'nuevo';
+  if (VISTAS.indexOf(vista) < 0) vista = 'inicio';
   S.vista = vista; guardar(LS.ultimaVista, vista);
   VISTAS.forEach(function (v) { $('#vista-' + v).hidden = v !== vista; });
   $$('#nav [data-vista]').forEach(function (b) { b.setAttribute('aria-current', b.dataset.vista === vista ? 'page' : 'false'); });
@@ -80,7 +80,7 @@ function iniciar() {
 
   /* Navegación y avisos */
   $('#nav').addEventListener('click', function (ev) { var b = ev.target.closest('[data-vista]'); if (b) irA(b.dataset.vista); });
-  $('#btn-config').addEventListener('click', function () { irA(S.vista === 'ajustes' ? 'pedidos' : 'ajustes'); });
+  $('#btn-config').addEventListener('click', function () { irA(S.vista === 'ajustes' ? 'inicio' : 'ajustes'); });
   $('#aviso').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-aviso]'); if (!b) return;
     if (b.dataset.aviso === 'reintentar') { enviarPendientes(false); return; }
@@ -106,7 +106,7 @@ function iniciar() {
   $('#ok-nuevo').addEventListener('click', function () { cerrar($('#dlg-ok')); irA('nuevo'); var c = $('#cliente'); if (c) c.focus(); });
   $('#ok-ver').addEventListener('click', function () { cerrar($('#dlg-ok')); irA('pedidos'); });
 
-  ligarCalendario(); ligarProduccion(); ligarNumeros(); ligarAjustes();
+  ligarCalendario(); ligarProduccion(); ligarNumeros(); ligarAjustes(); ligarInicio();
 
   /* Mantenerse al día sin que Lorena tenga que tocar nada */
   document.addEventListener('visibilitychange', function () { if (!document.hidden && S.vista !== 'nuevo' && S.vista !== 'ajustes') refrescarSiViejo(); });
@@ -119,8 +119,6 @@ function iniciar() {
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(function () {});
 
   actualizarSaldo(); actualizarEntrega(); pintarAviso();
-  var ultima = leer(LS.ultimaVista, '');
-  var inicial = conectado ? 'pedidos' : (VISTAS.indexOf(ultima) >= 0 && ultima !== 'ajustes' ? ultima : (S.cfg.url && S.cfg.clave ? 'pedidos' : 'nuevo'));
-  irA(inicial);
+  irA(conectado ? 'pedidos' : 'inicio');          // la app siempre abre en el Inicio
   if (S.cfg.url && S.cfg.clave) { sincronizar(false).then(function () { return enviarPendientes(true); }); } else { ponerConexion('sinconfig'); }
 }

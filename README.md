@@ -48,6 +48,8 @@ Este repositorio no contiene la URL del script, la clave ni el enlace de la hoja
 
 ## Calculadora de precio (versión 5)
 
+La calculadora vive en el **Inicio**, que es la pantalla con la que abre la app: elige un producto (o escribe horas y gramos) y el precio sugerido queda fijo abajo mientras llenas el resto. También hay un botón "Calcular precio" dentro de "Nuevo pedido" y "Editar", que abre el mismo cálculo en un cuadro y puede dejar el precio en el valor total. En el Inicio además están los accesos a "Nuevo pedido" y "Pedidos" y las próximas entregas.
+
 Cálculo habitual para ponerle precio a algo hecho a mano:
 
 - Costo real = filamento + impresora (luz, desgaste y mantenimiento) + impresiones que salen mal + componentes + tu trabajo + empaque y envío.

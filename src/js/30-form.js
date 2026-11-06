@@ -288,7 +288,8 @@ function pintarImpresoras(p, actual) {
   var previo = actual !== undefined ? actual : sel.value;
   var nombres = (S.config.impresoras || []).map(function (i) { return i.nombre; });
   if (previo && nombres.indexOf(previo) < 0) nombres.push(previo);
-  sel.innerHTML = '<option value="">Sin asignar</option>' + nombres.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+  var html = '<option value="">Sin asignar</option>' + nombres.map(function (n) { return '<option value="' + esc(n) + '">' + esc(n) + '</option>'; }).join('');
+  if (sel.innerHTML !== html) sel.innerHTML = html;
   sel.value = previo || '';
 }
 function leerCostos(p) {

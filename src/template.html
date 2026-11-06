@@ -45,8 +45,29 @@ __CSS__
 <main class="wrap">
   <div id="aviso" class="avisos" hidden></div>
 
+  <!-- INICIO -->
+  <section id="vista-inicio" aria-label="Inicio">
+    <div class="ini-acc">
+      <button type="button" class="btn primary" data-ir="nuevo">+ Nuevo pedido</button>
+      <button type="button" class="btn" data-ir="pedidos">Pedidos <b class="ini-n" id="ini-activos" hidden>0</b></button>
+    </div>
+
+    <div class="card" id="calc-card">
+      <h2>Calculadora de precio</h2>
+      <p class="hint ini-sub">¿A cuánto lo vendo? Elige un producto o escribe los números y te sale un precio con tu ganancia incluida.</p>
+      <div class="aviso" id="ci-faltan" hidden><span><strong>Faltan tus costos.</strong> Sin el costo por gramo y por hora de la impresora, el precio sale más bajo que el real.</span><button class="btn small" id="ci-completar" type="button">Completar costos</button></div>
+      <div class="stack" id="ci-cont"></div>
+      <div class="acciones ini-pie"><button class="btn small ghost" id="ci-limpiar" type="button">Empezar de nuevo</button></div>
+    </div>
+
+    <div class="card" id="ini-entregas-card">
+      <h2>Próximas entregas</h2>
+      <div id="ini-entregas"></div>
+    </div>
+  </section>
+
   <!-- NUEVO PEDIDO -->
-  <section id="vista-nuevo" aria-label="Nuevo pedido">
+  <section id="vista-nuevo" aria-label="Nuevo pedido" hidden>
     <form id="form" novalidate autocomplete="off">
 
       <div class="card">
@@ -441,7 +462,7 @@ __CSS__
         <p class="hint" id="pa-estado" role="status"></p>
         <div class="acciones">
           <button class="btn primary" id="pa-guardar" type="button">Guardar</button>
-          <button class="btn small" id="pa-abrir" type="button">Abrir la calculadora</button>
+          <button class="btn small" id="pa-abrir" type="button">Ir a la calculadora</button>
         </div>
       </div>
     </div>
@@ -504,7 +525,8 @@ __CSS__
 
 <nav class="nav" id="nav" aria-label="Secciones">
   <div class="wrap">
-    <button type="button" data-vista="nuevo" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Nuevo</span></button>
+    <button type="button" data-vista="inicio" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"/></svg><span>Inicio</span></button>
+    <button type="button" data-vista="nuevo" aria-current="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg><span>Nuevo</span></button>
     <button type="button" data-vista="pedidos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Pedidos</span><b class="cnt" id="cuenta-activos" hidden>0</b></button>
     <button type="button" data-vista="calendario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg><span>Calendario</span></button>
     <button type="button" data-vista="produccion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg><span>Producción</span><b class="cnt" id="cuenta-prod" hidden>0</b></button>
@@ -698,35 +720,7 @@ __CSS__
   <h2 id="precio-titulo">Calculadora de precio</h2>
   <p class="sub">Un estimado con tus costos de hoy. Es una guía: el precio final lo decides tú.</p>
   <div class="stack">
-    <div class="field" id="pr-ficha-box">
-      <label for="pr-ficha">Rellenar con una ficha</label>
-      <select id="pr-ficha"></select>
-    </div>
-    <div class="field"><label for="pr-impresora">Impresora</label><select id="pr-impresora"></select></div>
-    <div class="grid2">
-      <div class="field"><label for="pr-cant">Unidades</label><input id="pr-cant" type="number" min="1" max="999" step="1" value="1" inputmode="numeric"></div>
-      <div class="field"><label for="pr-horas">Horas de impresión</label><input id="pr-horas" type="text" inputmode="decimal" placeholder="Ej: 3,5" autocomplete="off"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label for="pr-gramos">Gramos de filamento</label><input id="pr-gramos" type="text" inputmode="decimal" placeholder="Ej: 120" autocomplete="off"></div>
-      <div class="field"><label for="pr-minutos">Tu trabajo (minutos)</label><input id="pr-minutos" type="text" inputmode="decimal" placeholder="Ej: 30" autocomplete="off"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label for="pr-comps">Componentes y otros materiales</label><div class="money"><input id="pr-comps" type="text" inputmode="numeric" autocomplete="off"></div></div>
-      <div class="field"><label for="pr-empaque">Empaque</label><div class="money"><input id="pr-empaque" type="text" inputmode="numeric" autocomplete="off"></div></div>
-    </div>
-    <div class="field"><label for="pr-envio">Envío que paga el negocio</label><div class="money"><input id="pr-envio" type="text" inputmode="numeric" autocomplete="off"></div></div>
-    <details id="pr-params">
-      <summary>Margen y porcentajes de este cálculo</summary>
-      <div class="stack">
-        <div id="pq-cont" class="stack"></div>
-        <p class="hint">Los cambios de aquí valen solo para este cálculo. Para dejarlos fijos, toca el botón.</p>
-        <div class="acciones"><button class="btn small" id="pq-guardar" type="button">Guardar como mis valores</button></div>
-      </div>
-    </details>
-    <div class="saldo" id="pr-res" data-estado="vacio" aria-live="polite"><span class="t">Precio sugerido</span><span class="v">&mdash;</span></div>
-    <div id="pr-desglose" class="pr-desglose"></div>
-    <p class="hint" id="pr-nota" role="status"></p>
+    <div id="pr-cont" class="stack"></div>
     <div class="acciones-dlg">
       <button class="btn primary" id="pr-usar" type="button" hidden>Usar como valor total</button>
       <button class="btn ghost" id="pr-cerrar" type="button">Cerrar</button>
