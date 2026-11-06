@@ -343,3 +343,11 @@ details .stack{padding-bottom:14px}
 #f-notas{min-height:70px}
 .ok-ficha{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;background:var(--surface-2);border-radius:14px;padding:12px 14px;margin-top:14px}
 .ok-ficha p{font-size:14px;flex:1 1 200px}
+.fl-fila{background:#0f0f10;border-radius:14px;padding:12px;display:grid;gap:8px}
+.fl-fila.fl-no{opacity:.75}
+.fl-num{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
+.fl-num label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.fl-hh:empty{display:none}
+.fl-pie{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.fl-st{font-size:13px;color:var(--amber);flex:1}
+.fl-st:empty{display:none}

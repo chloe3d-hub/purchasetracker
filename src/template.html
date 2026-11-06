@@ -409,6 +409,23 @@ __CSS__
           <input id="fichas-buscar" type="text" placeholder="Buscar producto" autocomplete="off" aria-label="Buscar una ficha o un producto del catálogo" style="flex:1 1 160px;width:auto">
         </div>
         <div id="fichas-lista" class="stack"></div>
+        <details id="fichas-pegar-det">
+          <summary>Pegar varias fichas de una vez</summary>
+          <div class="stack">
+            <p class="hint">Pega tu lista con una línea por producto. En cada línea escribe el nombre, los gramos y las horas de UNA unidad, en el orden que quieras. Por ejemplo: "Batman 250,55 g 8,5 h" o "Aretes 1,96 g 24 min". Antes de guardar vas a ver cómo se leyó cada línea.</p>
+            <textarea id="fl-texto" rows="8" autocomplete="off" aria-label="Lista de productos con gramos y horas" placeholder="Máscara carnaval 3h 35.76g&#10;Aretes bicicleta 1.96g 24min"></textarea>
+            <div class="acciones"><button class="btn small primary" id="fl-revisar" type="button">Revisar lista</button></div>
+            <div id="fl-prev" class="stack" hidden>
+              <p class="hint" id="fl-resumen" role="status"></p>
+              <div class="field">
+                <label for="fl-imp-todas">Impresora para todas (después puedes cambiar cada una)</label>
+                <select id="fl-imp-todas"></select>
+              </div>
+              <div id="fl-filas" class="stack"></div>
+              <button class="btn primary" id="fl-guardar" type="button">Guardar fichas</button>
+            </div>
+          </div>
+        </details>
         <details id="fichas-hist-det"><summary>Sugerencias de tus pedidos anteriores <span id="fichas-hist-n" class="opc"></span></summary><div class="stack" id="fichas-hist"></div></details>
         <details id="fichas-sin-det"><summary>Productos del catálogo sin ficha <span id="fichas-sin-n" class="opc"></span></summary><div class="stack" id="fichas-sin"></div></details>
       </div>

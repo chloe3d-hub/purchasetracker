@@ -42,6 +42,8 @@ function avisosCosto(c, f) {
   var a = [];
   if (c.sinGramo) a.push('falta el costo por gramo (Ajustes > Costos)');
   if (c.sinHora) a.push(f.impresora ? 'falta el costo por hora de ' + f.impresora : 'falta elegir la impresora para contar sus horas');
+  if (Number(f.horas) > 0 && !(Number(f.gramos) > 0)) a.push('faltan los gramos');
+  if (Number(f.gramos) > 0 && !(Number(f.horas) > 0)) a.push('faltan las horas');
   c.faltan.forEach(function (n) { a.push('"' + n + '" ya no está en la lista de componentes'); });
   return a;
 }
@@ -474,5 +476,6 @@ function ligarFichas() {
     var s = S.fichaSugerida; if (!s) return;
     cerrar($('#dlg-ok')); abrirFicha(s);
   });
+  ligarListaFichas();
   cargarCatalogo(false);
 }
